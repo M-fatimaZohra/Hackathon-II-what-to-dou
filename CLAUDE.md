@@ -122,6 +122,7 @@ You are not expected to solve every problem autonomously. You MUST invoke the us
 - Prefer the smallest viable diff; do not refactor unrelated code.
 - Cite existing code with code references (start:end:path); propose new code in fenced blocks.
 - Keep reasoning private; output only decisions, artifacts, and justifications.
+- File and folder names must not exceed 240 characters to ensure compatibility with GitHub's 259 character limit.
 
 ### Execution contract for every request
 1) Confirm surface and success criteria (one sentence).
@@ -205,6 +206,27 @@ Wait for consent; never auto-create ADRs. Group related decisions (stacks, authe
 - `history/prompts/` — Prompt History Records
 - `history/adr/` — Architecture Decision Records
 - `.specify/` — SpecKit Plus templates and scripts
+- `.claude/agents/` — Available AI agents
+- `.claude/skills/` — Reusable agent skills
+
+## Available Agents
+
+### content-strategist
+- **Purpose**: Handles content-related work including documentation updates, README modifications, branding guidance, and content strategy decisions
+- **Responsibilities**: Maintaining versioned documentation, updating project branding, ensuring content aligns with current project phase
+- **Usage**: When updating README.md, creating documentation, or needing branding guidance
+
+## Available Skills
+
+### content_writer
+- **Location**: `.claude/skills/content_strategist/00_content_writer/Skill.md`
+- **Purpose**: Create, update, and maintain clear, version-aware documentation based on specifications and user instructions
+- **Tasks**: Analyze specs, write Markdown docs, maintain version history, update README.md
+
+### branding_ui
+- **Location**: `.claude/skills/content_strategist/01_branding_UI/Skill.md`
+- **Purpose**: Define and manage visual identity including brand name, color palette, font themes, and styling
+- **Tasks**: Interpret branding prompts, select color palettes, choose fonts, define visual tone
 
 ## Code Standards
 See `.specify/memory/constitution.md` for code quality, testing, performance, security, and architecture principles.
