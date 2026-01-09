@@ -1,0 +1,14 @@
+name: 00-ai-native-todo-app
+version: "1.0"
+structure:
+  specs_dir: specs
+  features_dir: specs/features
+  api_dir: specs/api
+  database_dir: specs/database
+  ui_dir: specs/ui
+  branding_dir: specs
+phases:
+  - name: 001-todo-cli
+    features: [todo_crud]
+  - name: 002-todo-web-app
+    features: [todo_crud, authentication]

@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs",
+      "mcp__next-devtools__nextjs_call",
+      "mcp__next-devtools__nextjs_docs",
+      "WebSearch"
+    ]
+  }
+}
