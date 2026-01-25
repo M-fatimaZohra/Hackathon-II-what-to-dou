@@ -1,72 +1,73 @@
-# Features of the what-to-dou App
+# Features of the What to Dou Full-Stack App
 
 ## Core Features
 
 ### Task Management
-The what-to-dou app provides comprehensive task management capabilities through a simple command-line interface:
+The What to Dou app provides comprehensive task management capabilities through a modern web interface with personal user accounts:
 
-- **Create Tasks:** Add new tasks with required titles and optional descriptions
-- **View Tasks:** Display all tasks in an organized table format showing ID, title, description, and completion status
-- **Update Tasks:** Modify existing task titles and descriptions as needed
-- **Delete Tasks:** Remove tasks that are no longer needed
+- **Create Tasks:** Add new tasks with required titles, optional descriptions, and priority levels
+- **View Tasks:** Display all user tasks in an organized list format showing title, description, priority, and completion status
+- **Update Tasks:** Modify existing task titles, descriptions, and priority levels as needed
+- **Delete Tasks:** Remove tasks that are no longer needed with confirmation
 - **Toggle Completion:** Mark tasks as complete or incomplete with a simple toggle
 
-### User Interface
-- **Interactive Menu System:** Easy-to-use menu with clearly numbered options (1-6)
-- **Guided Prompts:** Step-by-step prompts guide users through each operation
-- **Clear Feedback:** Immediate confirmation messages for all successful operations
-- **Error Handling:** User-friendly error messages that explain what went wrong and how to fix it
+### User Authentication
+- **User Registration:** Secure account creation with email and password
+- **Login/Logout:** Secure authentication with session management
+- **Personal Accounts:** Individual task management with user isolation
+- **Session Security:** JWT-based secure session handling
 
 ### Data Management
-- **Unique ID Assignment:** Automatic generation of unique IDs for each task
-- **In-Memory Storage:** Fast, temporary storage solution for immediate task management needs
-- **Structured Data Format:** Consistent task structure with ID, title, description, and completion status
+- **Persistent Storage:** Tasks stored permanently in PostgreSQL database
+- **Cross-Device Sync:** Access tasks from any device with your account
+- **Structured Data Format:** Consistent task structure with user ID, title, description, priority, and completion status
+- **Data Security:** User data isolation with proper authentication checks
 
 ## Technical Features
 
 ### Architecture
-- **Modular Design:** Separate functions for each operation for maintainability
-- **Error Handling:** Comprehensive exception handling with user-friendly messages
-- **Input Validation:** Validation to ensure required fields are filled and data is properly formatted
-- **Data Integrity:** Checks to ensure task IDs exist before performing operations
+- **Full-Stack Design:** Separated frontend (Next.js) and backend (FastAPI) applications
+- **RESTful API:** Clean API endpoints for all task operations with proper error handling
+- **Database Integration:** SQLModel ORM with PostgreSQL for robust data management
+- **Authentication System:** Better Auth integration for secure user management
 
 ### User Experience
-- **Session Continuity:** Stay in the application until explicitly exiting
-- **Pause Functionality:** "Press Enter to continue" allows users to review results
-- **Intuitive Navigation:** Simple menu system that's easy to navigate
-- **Immediate Response:** Quick processing of all operations
+- **Responsive Design:** Mobile-friendly interface that works on all screen sizes
+- **Intuitive Navigation:** Clear navigation between different sections of the application
+- **Real-time Updates:** Immediate feedback after all operations
+- **Search and Filter:** Advanced task discovery capabilities
 
-## Planned Features for Future Versions
+## Advanced Features
 
-### UI Version Enhancements
-- **Persistent Storage:** Database integration for permanent task storage
-- **Due Dates:** Ability to assign and track task deadlines
-- **Priority Levels:** Set task importance (high, medium, low)
-- **Categories/Tags:** Organize tasks into groups or categories
-- **Search and Filter:** Find specific tasks quickly
-- **User Accounts:** Personalized task management with login
-- **Mobile Responsive:** Access and manage tasks from any device
+### Task Organization
+- **Priority Levels:** Assign priority levels (low, medium, high, urgent) to tasks
+- **Search Functionality:** Find tasks by keyword in title or description
+- **Filter Options:** Sort tasks by priority level or completion status
+- **Task Status Management:** Clear visual indicators for completed/incomplete tasks
 
-### Advanced Functionality
-- **Task Sharing:** Collaborate on tasks with others
-- **Reminders:** Email or notification system for upcoming deadlines
-- **Statistics:** Track task completion rates and productivity
-- **Import/Export:** Backup and restore functionality
-- **Recurring Tasks:** Create tasks that repeat on a schedule
-- **Attachments:** Add files or images to tasks
+### Security Features
+- **User Isolation:** Strict data separation between different user accounts
+- **Secure Authentication:** Encrypted password storage and secure session handling
+- **Permission Validation:** User permission checks for all task operations
+- **JWT Token Security:** Secure token-based authentication system
+
+### Platform Features
+- **Cross-Device Sync:** Tasks synchronize across all devices through cloud database
+- **Modern UI:** Clean, accessible interface built with Tailwind CSS
+- **Performance Optimized:** Efficient database queries and caching strategies
+- **Type Safety:** TypeScript and Pydantic for improved code reliability
 
 ## Benefits
 
 ### Current Version Benefits
-- **Lightweight:** Fast and efficient with minimal system resources
-- **Simple:** No complex setup required, just run and start managing tasks
-- **Accessible:** Works on any system with Python installed
-- **Privacy:** All data stays on your local machine
-- **Learning Tool:** Great example of CLI application development
+- **Persistent Storage:** Tasks remain available after logout and across sessions
+- **Personal Accounts:** Secure, individual task management with authentication
+- **Cross-Device Access:** Access your tasks from any device with internet connection
+- **Modern Interface:** Intuitive web interface with responsive design
+- **Enhanced Security:** Individual account protection and data isolation
 
-### Future Version Benefits
-- **Persistence:** Tasks will be saved permanently
-- **Enhanced UX:** More intuitive graphical interface
-- **Advanced Features:** Rich task management capabilities
-- **Collaboration:** Work on tasks with others
-- **Cross-Platform:** Access from multiple devices and operating systems
+### Future Development Benefits
+- **Scalable Architecture:** Modern tech stack ready for feature expansion
+- **Maintainable Code:** Separated concerns and clean architecture patterns
+- **Extensible Design:** Framework ready for additional features and integrations
+- **Professional Quality:** Production-ready architecture with security considerations

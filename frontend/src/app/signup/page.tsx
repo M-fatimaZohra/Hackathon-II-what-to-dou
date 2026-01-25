@@ -2,9 +2,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { signUp } from '@/lib/actions/auth-action';
+import { useRouter } from 'next/navigation';
+import { authClient } from '@/lib/auth-client';
 
 export default function SignUpPage() {
+  const router = useRouter();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -13,12 +15,18 @@ export default function SignUpPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const result = await signUp(name, email, password);
-      if (result && typeof result === 'object' && 'error' in result && result.error) {
-        setError(result.error.message || 'Signup failed');
-      } else {
+      const { data, error: signUpError } = await authClient.signUp.email({
+        email,
+        password,
+        name,
+        callbackURL: "/tasks",
+      });
+
+      if (signUpError) {
+        setError(signUpError.message || 'Signup failed');
+      } else if (data) {
         // Redirect to tasks page on successful signup
-        window.location.href = '/tasks';
+        router.push('/tasks');
       }
     } catch (err) {
       setError('An error occurred during signup');

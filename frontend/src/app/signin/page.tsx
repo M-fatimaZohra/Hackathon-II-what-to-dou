@@ -2,9 +2,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { signIn } from '@/lib/actions/auth-action';
+import { useRouter } from 'next/navigation';
+import { authClient } from '@/lib/auth-client';
 
 export default function SignInPage() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -12,12 +14,17 @@ export default function SignInPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const result = await signIn(email, password);
-      if (result && typeof result === 'object' && 'error' in result && result.error) {
-        setError(result.error.message || 'Sign in failed');
-      } else {
+      const { data, error: signInError } = await authClient.signIn.email({
+        email,
+        password,
+        callbackURL: "/tasks",
+      });
+
+      if (signInError) {
+        setError(signInError.message || 'Sign in failed');
+      } else if (data) {
         // Redirect to tasks page on successful signin
-        window.location.href = '/tasks';
+        router.push('/tasks');
       }
     } catch (err) {
       setError('An error occurred during sign in');

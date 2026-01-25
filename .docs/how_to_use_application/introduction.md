@@ -1,97 +1,107 @@
-# How to Use the what-to-dou App
+# How to Use the What to Dou Web Application
 
 ## Introduction
 
-The what-to-dou app is a command-line interface (CLI) application designed for efficient task management. This application allows you to create, manage, and track your tasks directly from the terminal with a simple, menu-driven interface.
+The What to Dou app is a modern, full-stack web application designed for efficient task management with personal user accounts. This application allows you to create, manage, and track your tasks through an intuitive web interface with secure authentication, persistent storage, and cross-device synchronization.
 
 ## Getting Started
 
 ### Prerequisites
-- Python 3.13 or higher
-- UV package manager
+- Node.js 18+ for the frontend application
+- Python 3.9+ for the backend services
+- PostgreSQL database (Neon recommended)
+- Package managers: npm for frontend, uv/pip for backend
 
 ### Installation and Setup
-1. Navigate to the project directory
-2. Initialize the UV environment:
+1. Clone the repository:
    ```bash
-   cd src
-   uv venv
-   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   git clone <repository-url>
+   cd what-to-dou
+   ```
+
+2. **Setup Backend:**
+   ```bash
+   cd backend
+   uv sync --all-extras
+   cp .env.example .env  # Update with your database credentials
+   uv run alembic upgrade head  # Initialize database
+   uv run python -m src.main
+   ```
+
+3. **Setup Frontend:**
+   ```bash
+   cd frontend
+   npm install
+   cp .env.local.example .env.local  # Update with your backend URL
+   npm run dev
    ```
 
 ### Running the Application
-Execute the application using:
-```bash
-uv run main.py
-```
+- **Backend API:** `uv run python -m src.main` (runs on http://localhost:8000)
+- **Frontend App:** `npm run dev` (runs on http://localhost:3000)
+- Access the web application at http://localhost:3000
 
 ## Application Features
 
-### 1. Add Task
-- Creates a new task with a required title and optional description
-- Automatically assigns a unique ID to each task
-- Provides immediate confirmation after successful creation
+### 1. User Authentication
+- **Sign Up:** Create a new account with email and password
+- **Sign In:** Secure login to access your personal task list
+- **Sign Out:** Secure logout with session termination
+- **Session Management:** Automatic session handling with JWT tokens
 
-### 2. Update Task
-- Modify existing task titles and/or descriptions
-- Keep current values by pressing Enter without typing
-- Validates task existence before making changes
+### 2. Task Management
+- **Create Tasks:** Add new tasks with title, description, and priority level
+- **View Tasks:** See all your tasks in an organized list format
+- **Update Tasks:** Modify existing task details anytime
+- **Delete Tasks:** Remove tasks you no longer need
+- **Toggle Completion:** Mark tasks as complete/incomplete with one click
 
-### 3. Delete Task
-- Remove tasks by their unique IDs
-- Provides confirmation before deletion
-- Validates task existence before removal
-
-### 4. View All Tasks
-- Displays all tasks in a tabular format
-- Shows ID, title, description, and completion status
-- Clear formatting for easy scanning of information
-
-### 5. Toggle Task Completion
-- Change task status between complete/incomplete
-- Instant status update with confirmation
-- Simple one-step process for status changes
+### 3. Advanced Features
+- **Search Tasks:** Find tasks by keyword in title or description
+- **Filter Tasks:** Sort by priority level (low, medium, high, urgent) or completion status
+- **Priority Levels:** Assign importance levels to tasks
+- **Persistent Storage:** All tasks saved in the database permanently
 
 ## Best Practices
 
 ### For Optimal Use
 - Use descriptive titles that clearly indicate the task purpose
 - Add relevant details in the description field when needed
-- Keep track of task IDs for efficient management
+- Assign appropriate priority levels to important tasks
 - Regularly review all tasks to maintain organization
-- Exit the application properly using option 6
+- Log out properly when using shared computers
 
 ### Tips for Efficiency
 - Add tasks immediately when they come to mind
-- Use the description field for context, deadlines, or additional details
-- Review tasks frequently to stay on track
-- Use the toggle feature to mark completed tasks
-- Organize tasks by priority mentally since there's no formal priority system yet
+- Use the search feature to quickly find specific tasks
+- Filter by priority or completion status to focus on important items
+- Organize tasks by assigning proper priority levels
+- Use the toggle feature to track your progress
 
 ## Understanding the Interface
 
-The application follows a consistent menu-driven approach:
-1. Main menu displays all available options
-2. Prompts guide you through each operation
-3. Confirmation messages indicate successful operations
-4. Error messages provide guidance when issues occur
-5. "Press Enter to continue" allows you to review results
+The application follows a modern, responsive web design approach:
+1. **Navigation:** Clear navigation between different sections
+2. **Task Forms:** Intuitive forms for creating and updating tasks
+3. **Real-time Feedback:** Immediate updates after successful operations
+4. **Error Handling:** User-friendly error messages when issues occur
+5. **Responsive Design:** Optimized for desktop, tablet, and mobile devices
 
-## Limitations to Consider
+## Security Considerations
 
-- All data is stored in memory and will be lost when the application exits
-- No persistent storage in this version
-- No search or filtering capabilities in the current version
-- No due dates or priority levels implemented yet
+- **Personal Data:** Tasks are isolated to individual user accounts
+- **Secure Authentication:** Passwords are encrypted and sessions are secured
+- **Data Protection:** All data stored securely in PostgreSQL database
+- **Session Management:** Automatic session expiration for security
 
 ## Troubleshooting
 
 Common issues and solutions:
-- Invalid choice error: Ensure you enter numbers 1-6 for menu options
-- Task not found: Verify the task ID is correct and the task exists
-- Empty title error: Remember that titles are required when adding tasks
-- Unexpected exit: Use option 6 to exit properly rather than closing the terminal
+- **Login Issues:** Verify your email and password are correct
+- **Task Not Found:** Check that you're signed in to the correct account
+- **Connection Errors:** Ensure both frontend and backend servers are running
+- **Database Issues:** Verify your database connection settings in .env file
 
 ## Next Steps
 
-This CLI version serves as the foundation for future enhancements. The upcoming UI version will include persistent storage, advanced search capabilities, due dates, priority levels, and collaborative features.
+This full-stack implementation provides a solid foundation for advanced features. Future enhancements will include due dates, task sharing, notifications, and analytics to further improve your task management experience.

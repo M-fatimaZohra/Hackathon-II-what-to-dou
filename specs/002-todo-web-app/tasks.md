@@ -38,7 +38,7 @@
 - [x] T005 Set up Neon Serverless PostgreSQL connection in backend/
 - [x] T006 [P] Configure Better Auth with JWT plugin in frontend/
 - [x] T007 [P] Implement backend middleware to validate JWT tokens in backend/src/middleware/
-- [x] T008 Create database schema for tasks in backend/src/models/task.py
+- [x] T008 Create database schema for tasks in backend/src/schema/models.py
 - [x] T009 Configure environment variables management with .env files
 - [x] T010 Set up API routing structure in backend/src/api/
 
@@ -77,8 +77,8 @@
 
 ### Implementation for User Story 2
 
-- [ ] T017 [P] [US2] Create Task model in backend/src/models/task.py
-- [ ] T018 [P] [US2] Create TaskService in backend/src/services/task_service.py
+- [x] T017 [P] [US2] Create Task model in backend/src/schema/models.py
+- [x] T018 [P] [US2] Create TaskService in backend/src/services/task_service.py
 - [x] T019 [US2] Implement GET /api/{user_id}/tasks endpoint in backend/src/api/tasks.py
 - [x] T020 [US2] Implement POST /api/{user_id}/tasks endpoint in backend/src/api/tasks.py
 - [x] T021 [US2] Implement GET /api/{user_id}/tasks/{id} endpoint in backend/src/api/tasks.py
@@ -118,10 +118,16 @@
 
 ### Implementation for User Story 4
 
-- [ ] T032 [P] [US4] Enhance TaskService with search and filter methods in backend/src/services/task_service.py
-- [ ] T033 [US4] Add search and filter parameters to GET /api/{user_id}/tasks endpoint in backend/src/api/tasks.py
-- [ ] T034 [P] [US4] Create SearchFilter component in frontend/src/components/SearchFilter.tsx
-- [ ] T035 [US4] Integrate search and filter functionality in frontend/src/components/TaskList.tsx
+- [x] T032a [US4] [RED] Create backend integration tests in backend/tests/test_search.py verifying keyword matching, priority filtering, and strict User ID isolation (User A cannot search User B's tasks)
+- [x] T032b [US4] [GREEN] Enhance TaskService with dynamic SQLModel query building in backend/src/services/task_service.py to satisfy T032a
+- [x] T033 [US4] [CONTRACT] Update GET /api/{user_id}/tasks endpoint in backend/src/api/tasks.py to accept and pass optional Query parameters for search, priority, and completed status
+- [x] T034a [US4] [RED] Create frontend unit tests for SearchFilter.tsx to verify state management and URL parameter generation
+- [x] T034b [US4] [GREEN] Implement SearchFilter.tsx in frontend/src/components/ with URLSearchParams for safe URL construction and a 300ms debounce
+- [x] T035 [US4] Integrate SearchFilter into TaskList.tsx and update API client in frontend/lib/api.ts to support optional query params
+
+### Security Implementation
+
+**Primary Filter Constraint**: Every filtered query MUST have `.where(Task.user_id == user_id)` as the base condition before any search or priority filters are appended.
 
 ---
 
@@ -129,7 +135,7 @@
 
 **Purpose**: Connect frontend and backend, implement responsive design, and add loading/error states (authentication temporarily removed for focused development)
 
-- [x] T036 [P] Set up API client in frontend/src/lib/api.ts with proper error handling
+- [x] T036 [P] Set up API client in frontend/src/lib/api.ts with proper JWT token handling
 - [x] T037 [P] Add loading states and error handling UI in frontend/src/components/
 - [x] T038 [P] Implement responsive design for mobile and desktop in frontend/src/app/
 - [x] T039 [P] Add form validation in frontend/src/components/TaskForm.tsx
@@ -146,7 +152,7 @@
 - [x] T043 Test JWT token validation and expiration handling
 - [x] T044 Verify all API endpoints require proper JWT token in Authorization header
 - [x] T045 Test input validation and sanitization in backend/
-- [x] T046 Perform security audit of JWT implementation
+- [x] T046 Perform security audit of JWT implementation between Better Auth and FastAPI
 
 ---
 
@@ -159,6 +165,7 @@
 - [x] T049 Performance optimization across all stories
 - [x] T050 Security hardening
 - [x] T051 Run validation of all implemented features
+- [x] T052 [P9] Perform a final end-to-end dry run of the search/filter feature in a production-like environment before GitHub push
 
 ---
 

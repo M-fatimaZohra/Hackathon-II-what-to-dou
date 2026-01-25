@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Inter, Satisfy } from "next/font/google";
+import { useSession, signOut } from '@/lib/auth-client';
 
 const inter = Inter({
   subsets: ["latin"],
@@ -16,52 +17,17 @@ const satisfy = Satisfy({
   weight: "400",
 });
 
-interface User {
-  id: string;
-  email: string;
-  name: string;
-}
-
 export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  // Check if user is logged in on initial load
-  useEffect(() => {
-    const checkAuthStatus = async () => {
-      try {
-        const response = await fetch('/api/auth/session');
-        if (response.ok) {
-          const userData = await response.json();
-          if (userData?.user) {
-            setUser({
-              id: userData.user.id,
-              email: userData.user.email,
-              name: userData.user.name || userData.user.email.split('@')[0]
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Error checking auth status:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkAuthStatus();
-  }, []);
+  const { data: sessionData, isPending } = useSession();
+  const user = sessionData?.user || null;
+  const loading = isPending;
 
   const handleSignOut = async () => {
     try {
-      const response = await fetch('/api/auth/signout', {
-        method: 'POST',
-      });
-
-      if (response.ok) {
-        setUser(null);
-        window.location.href = '/';
-      }
+      // Use the auth client's signOut function
+      await signOut();
+      window.location.href = '/';
     } catch (error) {
       console.error('Sign out error:', error);
     }
@@ -133,7 +99,7 @@ export default function Navigation() {
                   className="flex items-center space-x-2 px-4 py-2 bg-[#f2d16f] text-[#1B1C1C] rounded-md hover:bg-[#FFE9A8] text-sm font-medium"
                   style={inter.style}
                 >
-                  <span>{user.name}</span>
+                  <span>{user.name || user.email.split("@")[0]}</span>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
@@ -142,7 +108,7 @@ export default function Navigation() {
                 {/* Dropdown menu */}
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
                   <div className="px-4 py-2 border-b">
-                    <p className="text-sm font-medium text-[#1B1C1C]">{user.name}</p>
+                    <p className="text-sm font-medium text-[#1B1C1C]">{user.name || user.email.split("@")[0]}</p>
                     <p className="text-xs text-gray-500 truncate">{user.email}</p>
                   </div>
                   <div className="py-1">
@@ -210,7 +176,7 @@ export default function Navigation() {
                 <>
                   <div className="border-t border-gray-200 pt-2">
                     <div className="px-4 py-2 border-b">
-                      <p className="text-sm font-medium text-[#1B1C1C]">{user.name}</p>
+                      <p className="text-sm font-medium text-[#1B1C1C]">{user.name || user.email.split("@")[0]}</p>
                       <p className="text-xs text-gray-500 truncate">{user.email}</p>
                     </div>
                     <Link

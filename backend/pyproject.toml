@@ -8,8 +8,10 @@ dependencies = [
     "fastapi[standard]>=0.128.0",
     "passlib[bcrypt]>=1.7.4",
     "psycopg2-binary>=2.9.11",
+    "pytest>=9.0.2",
     "python-dotenv>=1.2.1",
     "python-jose[cryptography]>=3.5.0",
     "requests>=2.32.5",
     "sqlmodel>=0.0.31",
+    "uvicorn>=0.38.0",
 ]

@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Task } from '@/types/task';
 import { Inter, Oswald } from 'next/font/google';
 import TaskForm from './TaskForm';
 import TaskStatusToggle from './TaskStatusToggle';
+import SearchFilter from './SearchFilter';
 import { apiClient } from '@/lib/api';
+import { useSession } from '@/lib/auth-client';
 
 const inter = Inter({
   subsets: ["latin"],
@@ -20,27 +22,51 @@ const oswald = Oswald({
 });
 
 export default function TaskList() {
+  const { data: session, isPending } = useSession();
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editForm, setEditForm] = useState({ title: '', description: '', priority: 'medium' as 'low' | 'medium' | 'high' | 'urgent' });
+  const [filters, setFilters] = useState({
+    search: '',
+    priority: null as string | null,
+    completed: null as boolean | null,
+  });
 
   useEffect(() => {
-    loadTasks();
-  }, []);
+    if (session) {
+      loadTasks();
+    }
+  }, [session, filters.search, filters.priority, filters.completed]); // Only reload when individual filter values change
 
   const loadTasks = async () => {
+    // Set a timeout promise for 5 seconds
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Timeout: Request took too long')), 5000);
+    });
+
     try {
-      setLoading(true);
-      const tasksData = await apiClient.getTasks();
-      setTasks(tasksData);
+      setIsLoading(true);
       setError(null);
+
+
+      // Race the API call against the timeout, passing the filters
+      const tasksData = await Promise.race([
+        apiClient.getTasks(filters),
+        timeoutPromise
+      ]) as Task[];
+
+      setTasks(tasksData);
     } catch (err: any) {
-      console.error('Failed to load tasks:', err);
-      setError('Failed to load tasks. Please try again later.');
+      if (err.message === 'Timeout: Request took too long') {
+        setError('Connection timed out. Please try again');
+      } else {
+        console.error('Failed to load tasks:', err);
+        setError('Failed to load tasks. Please try again later.');
+      }
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -122,21 +148,38 @@ export default function TaskList() {
     setEditingTask(null);
   };
 
-  if (loading) {
+  // Show loading state while session is pending
+  if (isPending) {
     return <div className="flex justify-center items-center h-64">
-      <p className="text-lg text-[#1B1C1C] font-inter">Loading tasks...</p>
+      <p className="text-lg text-[#1B1C1C] font-inter">Loading your workspace...</p>
     </div>;
   }
 
+  // If session is null after loading, prompt user to sign in
+  if (!session) {
+    return <div className="flex justify-center items-center h-64">
+      <div className="text-center">
+        <p className="text-lg text-[#1B1C1C] font-inter mb-4">Please sign in to manage your tasks</p>
+        <a href="/signin" className="px-4 py-2 bg-[#f2d16f] text-[#1B1C1C] rounded hover:bg-[#FFE9A8] inline-block">
+          Sign In
+        </a>
+      </div>
+    </div>;
+  }
+
+
+  // Show error state with retry button
   if (error) {
     return <div className="flex justify-center items-center h-64">
-      <p className="text-red-500 text-lg">{error}</p>
-      <button
-        onClick={loadTasks}
-        className="ml-4 px-4 py-2 bg-[#f2d16f] text-[#1B1C1C] rounded hover:bg-[#FFE9A8]"
-      >
-        Retry
-      </button>
+      <div className="text-center">
+        <p className="text-red-500 text-lg">{error}</p>
+        <button
+          onClick={loadTasks}
+          className="mt-4 px-4 py-2 bg-[#f2d16f] text-[#1B1C1C] rounded hover:bg-[#FFE9A8]"
+        >
+          Retry
+        </button>
+      </div>
     </div>;
   }
 
@@ -145,14 +188,22 @@ export default function TaskList() {
       <div className="mb-8">
         <h1 className="text-4xl font-bold text-[#1B1C1C] mb-6" style={oswald.style}>My Tasks</h1>
         <TaskForm onTaskCreated={handleTaskCreated} />
+        <SearchFilter onFilterChange={setFilters} />
+
+        {/* Show loading state when filtering/searching, but keep UI available */}
+        {isLoading && (
+          <div className="text-center py-4">
+            <p className="text-[#1B1C1C]" style={inter.style}>Updating tasks...</p>
+          </div>
+        )}
       </div>
 
-      {tasks.length === 0 ? (
+      {!isLoading && tasks.length === 0 ? (
         <div className="text-center py-12">
           <h2 className="text-xl font-medium text-[#1B1C1C]" style={inter.style}>No tasks yet</h2>
           <p className="text-[#1B1C1C] mt-2" style={inter.style}>Create your first task to get started</p>
         </div>
-      ) : (
+      ) : !isLoading && (
         <div className="space-y-4">
           {tasks.map((task) => (
             editingTask && editingTask.id === task.id ? (

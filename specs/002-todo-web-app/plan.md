@@ -17,6 +17,14 @@ This plan outlines the implementation of the full-stack Todo Web Application wit
 - **Database**: Neon Serverless PostgreSQL
 - **Security**: User data isolation; JWT tokens validate all API endpoints
 
+### Architecture Decision Records (ADRs)
+
+#### ADR-004: Server-Side Dynamic Query Building
+**Decision**: Use FastAPI `Query` parameters and SQLModel conditional `.where()` chaining for search and filter functionality.
+**Rationale**: To maintain user data isolation and prevent 422 errors, we will use FastAPI `Query` parameters and SQLModel conditional `.where()` chaining. This ensures a stable API contract without modifying path parameters.
+**Status**: Accepted
+**Date**: 2026-01-22
+
 ### System Architecture
 ```
 ┌─────────────────┐    REST API     ┌──────────────────┐
@@ -156,17 +164,20 @@ This configuration properly connects the phases, specs, and tasks as requested i
 **Dependencies**: Phase 3
 
 **Tasks**:
-- Implement search by task title/description
-- Implement filter by priority (low/medium/high/urgent)
-- Implement filter by completion status (complete/incomplete)
-- Add pagination for large task lists
-- Optimize database queries with proper indexing
+- **Task 4.1 (RED)**: Implement Backend Integration Tests in `backend/tests/test_search.py` specifically for cross-user isolation and partial-match logic.
+- **Task 4.2 (GREEN)**: Implement dynamic filtering in `task_service.py` to satisfy the tests.
+- **Task 4.3 (CONTRACT)**: Update the GET route in `tasks.py` to accept and pass optional query parameters.
+- **Task 4.4 (FRONTEND)**: Implement `SearchFilter.tsx` using `URLSearchParams` for safe URL construction and a 300ms debounce.
 
 **Acceptance Criteria**:
 - Users can search tasks by keywords in title or description
 - Users can filter tasks by priority level
 - Users can filter tasks by completion status
 - Search and filter operations are performant
+- All filtered queries maintain user data isolation with `.where(Task.user_id == user_id)` as base condition
+
+**Security Implementation**:
+- **Primary Filter Constraint**: Every filtered query MUST have `.where(Task.user_id == user_id)` as the base condition before any search or priority filters are appended.
 
 ### Phase 5: Frontend UI Implementation
 **Priority**: P2

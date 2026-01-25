@@ -34,7 +34,7 @@ def create_test_token(user_id: str = "test_user_123", email: str = "test@example
     Create a test JWT token with the same format and validation as the backend.
 
     Args:
-        user_id: The user ID to embed in the token (sub field)
+        user_id: The user ID to embed in the token (user.id field)
         email: The email to embed in the token
 
     Returns:
@@ -44,8 +44,10 @@ def create_test_token(user_id: str = "test_user_123", email: str = "test@example
     ALGORITHM = "HS256"
 
     payload = {
-        "sub": user_id,  # subject (user ID) - this matches what the middleware expects
-        "email": email,
+        "user": {  # Better Auth uses 'user' object with 'id' field
+            "id": user_id,
+            "email": email,
+        },
         "exp": datetime.utcnow() + timedelta(days=1),  # Token expires in 1 day
         "iat": datetime.utcnow(),  # Issued at time
     }
@@ -99,7 +101,7 @@ def main():
         print("⚠️  Security Notes:")
         print("• JWT method: This token will work with the backend JWT middleware")
         print("• Mock method: X-Test-User header bypasses JWT validation temporarily")
-        print("• Path user_id must match the JWT 'sub' field for requests to succeed")
+        print("• Path user_id must match the JWT 'user.id' field for requests to succeed")
         print("• Invalid tokens or mismatched user_ids will be rejected by the middleware")
         print("• Remove mock authentication when ready for production deployment")
 
