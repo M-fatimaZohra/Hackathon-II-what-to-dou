@@ -1,8 +1,9 @@
+/*
 /**
  * Check Better Auth Data
  *
  * Check the actual data in Better Auth tables
- */
+
 
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -131,3 +132,4 @@ async function checkData() {
 
 // Run the check
 checkData().catch(console.error);
+*/

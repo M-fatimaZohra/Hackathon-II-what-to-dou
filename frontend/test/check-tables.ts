@@ -1,8 +1,9 @@
+/*
 /**
  * Check Better Auth Tables
  *
  * Directly query the database to see what tables exist
- */
+ 
 
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -106,3 +107,4 @@ async function checkTables() {
 
 // Run the check
 checkTables().catch(console.error);
+*/

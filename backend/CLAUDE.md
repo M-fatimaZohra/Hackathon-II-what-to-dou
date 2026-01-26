@@ -6,7 +6,7 @@
 ## Project Structure
 - `main.py` - FastAPI app entry point
 - `models.py` - SQLModel database models
-- `routes/` - API route handlers
+- `api/` - API route handlers
 - `db.py` - Database connection
 ## API Conventions
 - All routes under `/api/`

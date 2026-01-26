@@ -1,8 +1,9 @@
+/*
 /**
  * Simple Database Check
  *
  * Simple check to see what's in the database tables
- */
+
 
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -77,6 +78,7 @@ async function simpleCheck() {
     console.log('- JWKS table has 0 records - NO JWT SIGNING KEYS (this is the core issue!)');
     console.log('- VERIFICATION table has 0 records - no verification tokens');
     console.log('');
+
     console.log('💡 CONCLUSION: The JWKS table being empty explains why JWT tokens cannot be generated,');
     console.log('   which explains the "get-session 200:null, token 401" issue.');
 
@@ -91,3 +93,4 @@ async function simpleCheck() {
 
 // Run the check
 simpleCheck().catch(console.error);
+*/

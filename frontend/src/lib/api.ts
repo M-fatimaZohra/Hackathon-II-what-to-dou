@@ -1,7 +1,7 @@
 import { TaskRead, TaskCreate, TaskUpdate } from '@/types/task';
 import { authClient } from '@/lib/auth-client';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL!;
 
 class ApiClient {
   private getSessionData = async (): Promise<{ headers: Record<string, string>, userId: string }> => {

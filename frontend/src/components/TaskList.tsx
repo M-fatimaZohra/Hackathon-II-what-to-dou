@@ -51,9 +51,16 @@ export default function TaskList() {
       setError(null);
 
 
-      // Race the API call against the timeout, passing the filters
+      // Convert null values to undefined for API compatibility
+      const apiFilters = {
+        search: filters.search || undefined,
+        priority: filters.priority ?? undefined,
+        completed: filters.completed ?? undefined,
+      };
+
+      // Race the API call against the timeout, passing the converted filters
       const tasksData = await Promise.race([
-        apiClient.getTasks(filters),
+        apiClient.getTasks(apiFilters),
         timeoutPromise
       ]) as Task[];
 

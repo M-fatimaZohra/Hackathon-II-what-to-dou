@@ -1,8 +1,9 @@
+/*
 /**
  * JWT Initialization Test
  *
  * This test attempts to trigger JWT plugin initialization to create signing keys.
- */
+
 
 import { betterAuth } from "better-auth";
 import { jwt } from "better-auth/plugins";
@@ -196,3 +197,4 @@ async function testJWTInitialization() {
 
 // Run the test
 testJWTInitialization().catch(console.error);
+*/

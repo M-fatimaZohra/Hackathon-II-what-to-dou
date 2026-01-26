@@ -1,9 +1,10 @@
+/*
 /**
  * Trigger JWT Initialization
  *
  * This script attempts to trigger JWT signing key creation by directly using
  * Better Auth's JWT functionality.
- */
+
 
 // Import auth using relative path since tsx might not resolve @ alias
 // Commenting out to avoid conflicts during migration testing
@@ -153,3 +154,4 @@ async function triggerJWTInitialization() {
 
 // Run the trigger
 triggerJWTInitialization().catch(console.error);
+*/
