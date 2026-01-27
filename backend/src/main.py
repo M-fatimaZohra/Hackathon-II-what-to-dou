@@ -1,16 +1,22 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api import tasks
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = FastAPI(title="Todo API", version="1.0.0")
 
 # Add CORS middleware
+frontend_url = os.getenv("FRONTEND_API_URL", "http://localhost:3000")  # Use the frontend URL from environment
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Specific origin for frontend
+    allow_origins=[frontend_url],  # Allow frontend URL from environment
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["Authorization", "Content-Type"],  # Only allow necessary headers
 )
 
 # Include API routes
