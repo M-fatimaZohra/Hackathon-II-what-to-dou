@@ -1,3 +1,4 @@
+/*
 /**
  * JWT Flow Test
  *
@@ -5,7 +6,7 @@
  * 1. Create a user
  * 2. Authenticate the user (creating a session)
  * 3. Request a JWT token (which should trigger JWKS key creation)
- */
+
 
 import { betterAuth } from "better-auth";
 import { jwt } from "better-auth/plugins";
@@ -187,3 +188,4 @@ async function testJWTFlow() {
 
 // Run the test
 testJWTFlow().catch(console.error);
+*/

@@ -26,27 +26,27 @@ export const auth = betterAuth({
       enabled: true,
       strategy: "jwt", // This ensures HS256 JWT tokens are generated
       maxAge: 60 * 60 * 24 * 7, // 7 days
-      httpOnly: false, // Allows client-side access to JWT
+      httpOnly: true, // Secure setting
       refreshCache: true,
     },
   },
-  baseURL: "http://localhost:3000", // Explicitly set the base URL
-  trustedOrigins: ["http://localhost:3000"], // Allow localhost for development
+  baseURL: process.env.NEXT_PUBLIC_BASE_URL!, // Use environment variable for base URL
+  trustedOrigins: [process.env.NEXT_PUBLIC_BASE_URL!], // Use environment variable for trusted origins
   plugins: [],
   advanced: {
     cookies: {
       session_token: {
         attributes: {
-          httpOnly: false,
-          secure: false,
+          httpOnly: true,
+          secure: true,
           sameSite: "lax",
           path: "/",
         },
       },
       session_data: {
         attributes: {
-          httpOnly: false,
-          secure: false,
+          httpOnly: true,
+          secure: true,
           sameSite: "lax",
           path: "/",
         },

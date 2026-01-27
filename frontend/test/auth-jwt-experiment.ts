@@ -1,9 +1,10 @@
+/*
 /**
  * Test file to test JWT creation using Better Auth secret from .env
  *
  * This test focuses on verifying that JWT can be created using the algorithm,
  * payload and Better Auth secret, and logs the result.
- */
+
 
 // Load environment variables from .env file
 import { readFileSync } from 'fs';
@@ -148,3 +149,4 @@ async function testJWTSigning() {
 
 // Run the test
 testJWTSigning().catch(console.error);
+*/

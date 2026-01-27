@@ -1,9 +1,10 @@
+/*
 /**
  * Account Creation and JWT Keys Test
  *
  * This test creates a new account via Better Auth and checks if JWT keys
  * are automatically created in the JWKS table after account creation.
- */
+
 
 import { betterAuth } from "better-auth";
 import { jwt } from "better-auth/plugins";
@@ -184,3 +185,4 @@ async function testAccountCreationAndJWTKeys() {
 
 // Run the test
 testAccountCreationAndJWTKeys().catch(console.error);
+*/

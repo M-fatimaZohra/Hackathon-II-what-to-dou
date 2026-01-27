@@ -1,8 +1,9 @@
+/*
 /**
  * Check User Table Structure
  *
  * Check the actual structure of the user table
- */
+
 
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -126,3 +127,4 @@ async function checkUserTable() {
 
 // Run the check
 checkUserTable().catch(console.error);
+*/

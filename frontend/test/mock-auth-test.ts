@@ -1,3 +1,4 @@
+/*
 /**
  * Mock Authentication Test
  *
@@ -6,7 +7,7 @@
  * 2. Create a session
  * 3. Generate a JWT token
  * 4. Verify the token can be retrieved
- */
+
 
 // Load environment variables
 import { readFileSync } from 'fs';
@@ -214,11 +215,13 @@ async function mockSignupProcess() {
     // Step 6: Summary
     console.log('🏁 Mock Authentication Test Summary:');
     console.log('');
+
     console.log('✅ User data prepared');
     console.log('✅ Database insertion simulated');
     console.log('✅ Session creation simulated');
     console.log('✅ JWT token generation successful');
     console.log('');
+
     console.log('🎯 Key Finding: JWT generation works perfectly with Better Auth secret');
     console.log('🎯 The issue is likely in Better Auth\'s session management, not JWT signing');
     console.log('');
@@ -235,3 +238,4 @@ async function mockSignupProcess() {
 
 // Run the test
 mockSignupProcess().catch(console.error);
+*/

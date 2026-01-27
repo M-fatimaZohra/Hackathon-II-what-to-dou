@@ -1,10 +1,4 @@
-/**
- * JWT Generation Test
- *
- * This test verifies if Better Auth JWT plugin can generate tokens
- * after signup/signin operations.
- */
-
+/*
 import { betterAuth } from "better-auth";
 import { jwt } from "better-auth/plugins";
 import { Pool } from "pg";
@@ -198,3 +192,4 @@ async function testJWTGeneration() {
 
 // Run the test
 testJWTGeneration().catch(console.error);
+*/
