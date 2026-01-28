@@ -17,4 +17,4 @@
 - Use SQLModel for all database operations
 - Connection string from environment variable: DATABASE_URL
 ## Running
-uvicorn main:app --reload --port 8000
+uvicorn main:app --reload --port 7860
