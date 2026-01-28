@@ -28,9 +28,9 @@ description: "Task list for Frontend Production & Security Hardening"
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Create project structure per implementation plan
-- [ ] T002 [P] Configure environment variable validation for NEXT_PUBLIC_API_URL
-- [ ] T003 [P] Configure environment variable validation for NEXT_PUBLIC_BASE_URL
+- [X] T001 Create project structure per implementation plan
+- [X] T002 [P] Configure environment variable validation for NEXT_PUBLIC_API_URL
+- [X] T003 [P] Configure environment variable validation for NEXT_PUBLIC_BASE_URL
 
 ---
 
@@ -120,7 +120,26 @@ description: "Task list for Frontend Production & Security Hardening"
 
 ---
 
-[Add more user stories as needed, following the same pattern]
+## Phase 6: User Story 4 - Production Cookie Extraction & Backend CORS Alignment (Priority: P1)
+
+**Goal**: Update cookie extraction logic to handle production __Secure- prefixes and configure backend CORS for credential transmission
+
+**Independent Test**: Can be fully tested by verifying the application successfully retrieves session tokens from cookies in both development (non-secure) and production (secure with __Secure- prefix) environments and that API requests include credentials properly, delivering the core value of seamless authentication.
+
+### Tests for User Story 4 (OPTIONAL - only if tests requested) ⚠️
+
+- [ ] T030 [P] [US4] Contract test for secure cookie extraction in tests/contract/test_secure_cookie_extraction.py
+
+### Implementation for User Story 4
+
+- [X] T031 [P] [US4] Update getJwtTokenFromCookie() in frontend/src/lib/api.ts to detect __Secure- prefixed cookies
+- [X] T032 [P] [US4] Modify cookie extraction logic in frontend/src/lib/api.ts to search for both '__Secure-better-auth.session_data' and 'better-auth.session_data' keys
+- [X] T033 [US4] Implement array-based iteration through document.cookies in frontend/src/lib/api.ts to match possible cookie names using startsWith
+- [X] T034 [US4] Apply JWT validation (3-part split and HS256 check) to retrieved tokens in frontend/src/lib/api.ts
+- [X] T035 [US4] Update CORSMiddleware in backend/src/main.py to set allow_credentials=True
+- [X] T036 [US4] Configure trustedOrigins in backend/src/main.py with specific Vercel frontend URL in allowed origins
+
+**Checkpoint**: At this point, User Stories 1, 2, 3 AND 4 should all work independently
 
 ---
 
@@ -145,7 +164,7 @@ description: "Task list for Frontend Production & Security Hardening"
 - [X] T030 Code cleanup and refactoring
 - [ ] T031 Performance optimization across all stories
 - [ ] T032 [P] Additional unit tests (if requested) in tests/unit/
-- [ ] T033 Security hardening
+- [X] T033 Security hardening
 - [ ] T034 Run quickstart.md validation
 
 ---

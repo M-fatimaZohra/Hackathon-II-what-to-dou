@@ -55,12 +55,32 @@ As a developer, I want the frontend build process to complete successfully witho
 
 ---
 
+### User Story 4 - Production Cookie Extraction & Backend CORS Alignment (Priority: P1)
+
+As an end user accessing the application in production, I want session tokens to be properly extracted from cookies regardless of security prefixes and for the backend to accept credentials from the frontend domain so that my authenticated session works seamlessly without CORS errors.
+
+**Why this priority**: This is critical for production functionality - without proper cookie extraction in HTTPS environments and correct CORS configuration, users will experience authentication failures.
+
+**Independent Test**: Can be fully tested by verifying the application successfully retrieves session tokens from cookies in both development (non-secure) and production (secure with __Secure- prefix) environments and that API requests include credentials properly, delivering the core value of seamless authentication.
+
+**Acceptance Scenarios**:
+
+1. **Given** I am using the application in a production HTTPS environment, **When** the application attempts to retrieve my session token, **Then** it successfully finds the token even when prefixed with `__Secure-`
+2. **Given** I am making authenticated API requests from the frontend, **When** the request is sent to the backend, **Then** my credentials (cookies) are properly transmitted due to correct CORS configuration
+3. **Given** My session token exists in browser cookies, **When** I perform authenticated actions, **Then** the application maintains my session without prompting for re-authentication
+
+---
+
 ### Edge Cases
 
 - What happens when the production API URL is not configured in environment variables?
 - How does the system handle authentication when switching between different environments?
 - What occurs when build validation encounters TypeScript errors related to null/undefined values?
 - How does the application behave when image tags lack alt attributes during build validation?
+- What happens when the cookie prefix varies between different HTTPS implementations?
+- How does the system handle missing session tokens in both secure and non-secure contexts?
+- What occurs when CORS misconfiguration prevents credential transmission?
+- How does the application behave when multiple authentication cookies exist with different prefixes?
 
 ## Requirements *(mandatory)*
 

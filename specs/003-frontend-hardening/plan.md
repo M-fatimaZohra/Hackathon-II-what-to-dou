@@ -13,17 +13,22 @@ This plan addresses the frontend production readiness and security hardening req
 2. Hardening Better-Auth security settings for production with selective httpOnly flags (session_token: httpOnly=true for security, session_data: httpOnly=false to allow JWT extraction)
 3. Neutralizing test files to prevent build failures
 4. Ensuring TypeScript and accessibility compliance for successful builds
+5. Updating cookie extraction logic to handle production __Secure- prefixes in HTTPS environments
+6. Configuring backend CORS to properly accept credentials from frontend domain
 
 ## Technical Context
 
 **Language/Version**: TypeScript/JavaScript with Next.js 16
-**Primary Dependencies**: Next.js, Better Auth, Tailwind CSS, React Server Components
-**Storage**: N/A (frontend only changes)
+**Primary Dependencies**: Next.js, Better Auth, Tailwind CSS, React Server Components, FastAPI (backend)
+**Storage**: N/A (frontend only changes, backend uses PostgreSQL)
 **Testing**: Test files will be neutralized as part of this implementation
-**Target Platform**: Web application for Vercel deployment
+**Target Platform**: Web application for Vercel (frontend) and Hugging Face (backend) deployment
 **Project Type**: Web application (frontend component of existing full-stack app)
 **Performance Goals**: Maintain existing performance characteristics while improving security
-**Constraints**: Must maintain compatibility with existing backend API structure
+**Constraints**:
+  - Must maintain compatibility with existing backend API structure
+  - Must handle __Secure- prefixed cookies in production HTTPS environment
+  - Backend CORS must accept credentials from frontend domain
 **Scale/Scope**: Applies to frontend security and build process for existing application
 
 ## Constitution Check
@@ -66,9 +71,14 @@ frontend/
 ├── tests/
 ├── public/
 └── package.json
+
+backend/
+├── src/
+│   └── main.py
+└── tests/
 ```
 
-**Structure Decision**: This is a frontend-only update to an existing web application. The changes will be confined to the frontend directory with specific updates to authentication configuration (auth.ts and auth-client.ts) and API utilities (api.ts), and build validation. Test files located in both /tests and /components/__tests__ directories will be neutralized to ensure successful builds.
+**Structure Decision**: This is a full-stack update to an existing web application. The changes will include frontend updates to authentication configuration (auth.ts and auth-client.ts), API utilities (api.ts) with secure cookie handling, and backend CORS configuration in main.py. Test files located in both /tests and /components/__tests__ directories will be neutralized to ensure successful builds.
 
 ## Authentication Security Configuration
 
