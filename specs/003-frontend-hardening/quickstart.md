@@ -14,11 +14,26 @@
    const authConfig = {
      baseURL: process.env.NEXT_PUBLIC_BASE_URL,
      trustedOrigins: [process.env.NEXT_PUBLIC_BASE_URL],
-     cookies: {
-       httpOnly: true,
-       secure: true,
-       sameSite: "lax"
-     }
+     advanced: {
+       cookies: {
+         session_token: {
+           attributes: {
+             httpOnly: true,  // Keep secure for session integrity
+             secure: true,
+             sameSite: "lax",
+             path: "/",
+           },
+         },
+         session_data: {
+           attributes: {
+             httpOnly: false, // Allow JWT extraction by ApiClient for cross-domain requests
+             secure: true,
+             sameSite: "lax",
+             path: "/",
+           },
+         },
+       },
+     },
    };
    ```
 

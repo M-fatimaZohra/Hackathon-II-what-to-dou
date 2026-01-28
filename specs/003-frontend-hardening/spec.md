@@ -68,13 +68,22 @@ As a developer, I want the frontend build process to complete successfully witho
 
 - **FR-001**: System MUST replace hardcoded localhost URLs with environment variables (NEXT_PUBLIC_API_URL for backend, NEXT_PUBLIC_BASE_URL for frontend)
 - **FR-002**: System MUST throw clear console errors if required environment variables (NEXT_PUBLIC_API_URL) are undefined
-- **FR-003**: System MUST configure Better-Auth with httpOnly: true, secure: true, and sameSite: "lax" for production security
-- **FR-004**: System MUST update trustedOrigins to use production domain environment variables instead of localhost
-- **FR-005**: System MUST neutralize test files by commenting out their contents to prevent build failures
-- **FR-006**: System MUST pass TypeScript and linting validation during build process without errors
-- **FR-007**: System MUST generate a valid .next folder upon successful build completion
-- **FR-008**: System MUST ensure all image tags include appropriate alt attributes for accessibility compliance
-- **FR-009**: System MUST validate that all null/undefined checks pass TypeScript compilation (address Code 2345 errors)
+- **FR-003**: System MUST configure Better-Auth session_token with httpOnly: true, secure: true, and sameSite: "lax" for production security
+- **FR-004**: System MUST configure Better-Auth session_data cookie with httpOnly: false, secure: true, and sameSite: "lax" to allow ApiClient to extract JWT for cross-domain requests to Hugging Face backend
+- **FR-005**: This represents a pragmatic balance between XSS protection and functional cross-origin resource sharing (CORS) for JWT transmission across different domains
+- **FR-006**: System MUST update trustedOrigins to use production domain environment variables instead of localhost
+- **FR-007**: System MUST neutralize test files by commenting out their contents to prevent build failures
+- **FR-008**: System MUST pass TypeScript and linting validation during build process without errors
+- **FR-009**: System MUST generate a valid .next folder upon successful build completion
+- **FR-010**: System MUST ensure all image tags include appropriate alt attributes for accessibility compliance
+- **FR-011**: System MUST validate that all null/undefined checks pass TypeScript compilation (address Code 2345 errors)
+- **FR-012**: System MUST update the getJwtTokenFromCookie method to search for both `__Secure-better-auth.session_data` and `better-auth.session_data` cookie names
+- **FR-013**: System MUST iterate through document cookies and match against an array of possible cookie names using startsWith pattern matching
+- **FR-014**: System MUST apply JWT validation (3-part split and HS256 check) to any found token before returning it
+- **FR-015**: System MUST update the FastAPI CORS configuration to include the specific Vercel frontend URL in allowed origins
+- **FR-016**: System MUST set allow_credentials=True in the CORSMiddleware to enable secure cookie transmission
+- **FR-017**: System MUST validate that the extracted token has exactly 3 parts when split by periods (valid JWT format)
+- **FR-018**: System MUST handle both HS256 algorithm verification for the extracted JWT tokens
 
 ### Key Entities *(include if feature involves data)*
 
@@ -86,9 +95,14 @@ As a developer, I want the frontend build process to complete successfully witho
 ### Measurable Outcomes
 
 - **SC-001**: The application successfully connects to the production backend API without localhost connection errors (100% success rate)
-- **SC-002**: Authentication cookies are configured with proper security flags (httpOnly, secure, sameSite) when running in production environments (100% compliance)
+- **SC-002**: Authentication cookies are configured with proper security flags (session_token with httpOnly: true, session_data with httpOnly: false, both with secure: true and sameSite: "lax") when running in production environments (100% compliance)
 - **SC-003**: The build process completes successfully without test-related failures (100% build success rate)
 - **SC-004**: All TypeScript and linting errors are resolved, allowing successful compilation (0 errors post-implementation)
 - **SC-005**: A valid .next folder is generated upon successful build completion (100% of builds produce deployable output)
 - **SC-006**: All image tags include appropriate alt attributes for accessibility compliance (100% compliance)
 - **SC-007**: The application can be successfully deployed to Vercel or other production platforms without build failures (100% deployment success rate)
+- **SC-008**: Session tokens are successfully extracted in both development and production environments with 100% success rate
+- **SC-009**: API requests from frontend successfully transmit credentials to backend with 100% success rate
+- **SC-010**: No CORS-related errors occur during authenticated API requests between frontend and backend
+- **SC-011**: User sessions remain active during extended usage without unexpected authentication prompts
+- **SC-012**: JWT validation passes for all properly formatted tokens with 100% accuracy

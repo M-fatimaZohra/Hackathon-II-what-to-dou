@@ -7,9 +7,13 @@
 - Runtime configuration (rejected - security concerns)
 
 ## Decision: Better-Auth Security Settings
-**Rationale**: Setting httpOnly: true, secure: true, and sameSite: "lax" are security best practices for production environments. These settings protect against XSS and CSRF attacks.
+**Rationale**: Setting secure: true, and sameSite: "lax" are security best practices for production environments. These settings protect against CSRF attacks. For httpOnly, a selective approach is taken:
+- session_token: Set httpOnly: true to maintain security for session integrity
+- session_data: Set httpOnly: false to allow ApiClient to extract JWT for cross-domain requests to Hugging Face backend
+This creates a pragmatic balance between XSS protection and functional cross-origin resource sharing (CORS) for JWT transmission across different domains.
 **Alternatives considered**:
-- Keeping httpOnly: false (rejected - vulnerable to XSS)
+- Keeping both cookies with httpOnly: true (rejected - prevents JWT extraction for cross-domain requests)
+- Keeping both cookies with httpOnly: false (rejected - increases XSS vulnerability)
 - sameSite: "none" (rejected - less secure, requires secure: true)
 
 ## Decision: Test Neutralization Strategy

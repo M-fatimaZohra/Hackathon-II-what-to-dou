@@ -26,7 +26,7 @@ export const auth = betterAuth({
       enabled: true,
       strategy: "jwt", // This ensures HS256 JWT tokens are generated
       maxAge: 60 * 60 * 24 * 7, // 7 days
-      httpOnly: true, // Secure setting
+      httpOnly: false, // Changed to false to allow JWT extraction by ApiClient for cross-domain requests
       refreshCache: true,
     },
   },
@@ -45,7 +45,7 @@ export const auth = betterAuth({
       },
       session_data: {
         attributes: {
-          httpOnly: true,
+          httpOnly: false, // Changed to false to allow JWT extraction by ApiClient for cross-domain requests
           secure: true,
           sameSite: "lax",
           path: "/",

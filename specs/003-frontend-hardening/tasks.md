@@ -90,7 +90,7 @@ description: "Task list for Frontend Production & Security Hardening"
 
 - [X] T018 [P] [US2] Update baseURL in frontend/src/lib/auth.ts to process.env.NEXT_PUBLIC_BASE_URL
 - [X] T019 [P] [US2] Update trustedOrigins in frontend/src/lib/auth.ts to [process.env.NEXT_PUBLIC_BASE_URL]
-- [X] T020 [US2] Change cookie attributes in frontend/src/lib/auth.ts: httpOnly: true and secure: true
+- [ ] T020 [US2] Change cookie attributes in frontend/src/lib/auth.ts: secure: true, sameSite: "lax" (selective httpOnly settings applied separately)
 - [X] T021 [US2] Update baseURL in frontend/src/lib/auth-client.ts to process.env.NEXT_PUBLIC_BASE_URL
 - [X] T022 [US2] Verify sameSite is set to "lax" in frontend/src/lib/auth.ts
 
@@ -121,6 +121,19 @@ description: "Task list for Frontend Production & Security Hardening"
 ---
 
 [Add more user stories as needed, following the same pattern]
+
+---
+
+## Priority Group: Production Auth Visibility Fix
+
+**Goal**: Address the "Session token not found" error in production by selectively adjusting cookie security settings to allow JWT extraction while maintaining security for core session data.
+
+### Implementation Tasks
+
+- [X] T037 [P] Change session_data attribute httpOnly to false in frontend/src/lib/auth.ts to allow JWT extraction by ApiClient for cross-domain requests.
+- [X] T038 [P] Verify session_token remains httpOnly: true for core session security in frontend/src/lib/auth.ts to maintain protection against XSS attacks.
+
+**Checkpoint**: At this point, JWT tokens should be accessible to the ApiClient while maintaining security for session integrity.
 
 ---
 
