@@ -10,7 +10,7 @@
 
 This plan addresses the frontend production readiness and security hardening requirements by:
 1. Eliminating localhost references and configuring proper environment variables
-2. Hardening Better-Auth security settings for production (httpOnly, secure, sameSite flags)
+2. Hardening Better-Auth security settings for production with selective httpOnly flags (session_token: httpOnly=true for security, session_data: httpOnly=false to allow JWT extraction)
 3. Neutralizing test files to prevent build failures
 4. Ensuring TypeScript and accessibility compliance for successful builds
 5. Updating cookie extraction logic to handle production __Secure- prefixes in HTTPS environments
@@ -79,6 +79,14 @@ backend/
 ```
 
 **Structure Decision**: This is a full-stack update to an existing web application. The changes will include frontend updates to authentication configuration (auth.ts and auth-client.ts), API utilities (api.ts) with secure cookie handling, and backend CORS configuration in main.py. Test files located in both /tests and /components/__tests__ directories will be neutralized to ensure successful builds.
+
+## Authentication Security Configuration
+
+**Selective httpOnly Strategy**: Due to the requirement for cross-domain JWT transmission between the Vercel frontend and Hugging Face backend:
+- `session_token` cookie: Set `httpOnly: true` to maintain security for session integrity
+- `session_data` cookie: Set `httpOnly: false` to allow ApiClient to extract JWT for cross-domain requests
+- This creates a pragmatic balance between XSS protection and functional cross-origin resource sharing (CORS)
+- Both cookies maintain `secure: true` and `sameSite: "lax"` attributes for security
 
 ## Complexity Tracking
 

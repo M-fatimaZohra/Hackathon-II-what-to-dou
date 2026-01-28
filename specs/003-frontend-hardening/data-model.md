@@ -7,10 +7,15 @@
 
 ## Authentication Session
 - **Cookie Attributes**:
-  - httpOnly: boolean (true for production security)
-  - secure: boolean (true for HTTPS only)
-  - sameSite: string ("lax" for CSRF protection)
-- **Session Management**: Handled by Better-Auth with secure configuration
+  - **session_token**:
+    - httpOnly: boolean (true for production security)
+    - secure: boolean (true for HTTPS only)
+    - sameSite: string ("lax" for CSRF protection)
+  - **session_data**:
+    - httpOnly: boolean (false to allow JWT extraction by ApiClient)
+    - secure: boolean (true for HTTPS only)
+    - sameSite: string ("lax" for CSRF protection)
+- **Session Management**: Handled by Better-Auth with selective security configuration for cross-domain JWT transmission
 
 ## API Request Object
 - **Base URL**: Derived from environment variable
