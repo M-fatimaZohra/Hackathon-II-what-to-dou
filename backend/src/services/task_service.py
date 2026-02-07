@@ -1,5 +1,5 @@
 from sqlmodel import Session, select
-from schema.models import Task, TaskCreate, TaskUpdate, TaskRead
+from src.schema.models import Task, TaskCreate, TaskUpdate, TaskRead
 from typing import List, Optional
 from datetime import datetime
 

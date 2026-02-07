@@ -84,6 +84,15 @@ As an authenticated user, I want to ensure that my tasks remain private so that 
 - **FR-026**: System MUST implement row-level security for data isolation
 - **FR-027**: System MUST validate user permissions for all data operations
 
+### AI Agent Security Requirements (Phase III: Agentic Foundation)
+- **FR-028**: System MUST validate user permissions for each MCP tool call initiated by AI agent
+- **FR-029**: System MUST ensure AI agent can only access user's own data through MCP tools
+- **FR-030**: System MUST validate JWT token for all chat API requests before processing
+- **FR-031**: System MUST verify user_id in path parameter matches JWT token user_id for chat endpoints
+- **FR-032**: System MUST sanitize natural language input before processing by AI agent
+- **FR-033**: System MUST log all MCP tool calls for audit trail purposes
+- **FR-034**: System MUST validate conversation access rights before allowing conversation history retrieval
+
 ## Data Model
 
 ### User Entity (managed by Better Auth)
@@ -117,6 +126,14 @@ As an authenticated user, I want to ensure that my tasks remain private so that 
 - Login attempts MUST be limited to prevent brute force attacks (e.g., 5 attempts per 15 minutes)
 - Registration attempts SHOULD be limited per IP address
 - API endpoints SHOULD implement rate limiting for unauthenticated requests
+- Chat endpoints SHOULD implement rate limiting due to AI processing costs (e.g., 50 requests per hour per user)
+
+### AI Agent Security
+- MCP tools MUST validate user permissions for each operation initiated by AI agent
+- Natural language input MUST be sanitized before processing by AI agent
+- Conversation access MUST be restricted to the owning user
+- Tool calls initiated by AI agent MUST be logged for audit trail
+- User ID in JWT token MUST be validated against requested operations
 
 ## Error Handling
 - **400 Bad Request**: Invalid input data (e.g., invalid email format, weak password)
@@ -132,6 +149,11 @@ As an authenticated user, I want to ensure that my tasks remain private so that 
 - How does the system handle concurrent sessions from multiple devices?
 - What happens when a user's account is deleted while they have active sessions?
 - How does the system handle password reset requests?
+- What happens when a user tries to access another user's conversation history?
+- How does the system handle AI agent requests with invalid permissions?
+- What happens when the MCP server is temporarily unavailable during chat operations?
+- How does the system handle rate limiting for frequent AI chat requests?
+- What happens when natural language input contains malicious content?
 
 ## Success Criteria
 - **SC-001**: Users can complete account registration and sign-in within 1 minute
@@ -141,3 +163,6 @@ As an authenticated user, I want to ensure that my tasks remain private so that 
 - **SC-005**: 100% of data access attempts properly enforce user data isolation
 - **SC-006**: JWT tokens are properly validated and secured according to security best practices
 - **SC-007**: Brute force attacks are prevented through effective rate limiting
+- **SC-008**: 100% of AI agent-initiated operations validate user permissions before execution
+- **SC-009**: 100% of conversation data is properly isolated by user ID with no cross-user access
+- **SC-010**: 95% of chatbot interactions complete successfully with proper authentication validation

@@ -5,215 +5,140 @@ This document specifies the reusable UI components for the AI Native Todo Applic
 
 ## Component Categories
 
-### 1. Authentication Components
 
-#### AuthProvider
-**Purpose**: Provides authentication context to the application
-**Location**: `src/providers/auth-provider.tsx`
-**Props**: None
-**Context Provided**:
-- `user`: Current user object or null
-- `loading`: Authentication loading state
-- `login`: Login function
-- `logout`: Logout function
-- `signup`: Signup function
-
-#### LoginForm
-**Purpose**: Handles user login functionality
-**Location**: `src/components/auth/login-form.tsx`
-**Props**:
-- `onSuccess`: Callback function called after successful login
-- `onError`: Callback function called after login error
-- `showSignupLink`: Whether to show link to signup page (default: true)
-
-**State**:
-- `email`: User email input
-- `password`: User password input
-- `loading`: Submit button loading state
-- `error`: Error message display
-
-#### SignupForm
-**Purpose**: Handles user registration functionality
-**Location**: `src/components/auth/signup-form.tsx`
-**Props**:
-- `onSuccess`: Callback function called after successful signup
-- `onError`: Callback function called after signup error
-- `showLoginLink`: Whether to show link to login page (default: true)
-
-**State**:
-- `email`: User email input
-- `password`: User password input
-- `confirmPassword`: Password confirmation input
-- `loading`: Submit button loading state
-- `error`: Error message display
-
-#### LoginButton
-**Purpose**: Provides a login button that triggers authentication flow
-**Location**: `src/components/auth/login-button.tsx`
-**Props**:
-- `children`: Button content (default: "Login")
-- `variant`: Button style variant (primary, secondary, ghost)
-- `className`: Additional CSS classes
-
-#### LogoutButton
-**Purpose**: Provides a logout button that triggers logout flow
-**Location**: `src/components/auth/logout-button.tsx`
-**Props**:
-- `children`: Button content (default: "Logout")
-- `variant`: Button style variant (primary, secondary, ghost)
-- `className`: Additional CSS classes
-
-### 2. Task Components
+### 1. Task Components
 
 #### TaskList
 **Purpose**: Displays a list of tasks with filtering and search capabilities
-**Location**: `src/components/tasks/task-list.tsx`
+**Location**: `src/components/TaskList.tsx`
+**Props**: None (fetches tasks internally using apiClient)
+
+**Features**:
+- Displays all user tasks
+- Search and filter capabilities
+- Ability to add, edit, and delete tasks
+- Toggle task completion status
+- Loading and error states
+
+#### TaskStatusToggle
+**Purpose**: Toggle button for marking tasks as complete/incomplete
+**Location**: `src/components/TaskStatusToggle.tsx`
 **Props**:
-- `tasks`: Array of task objects to display
-- `onTaskClick`: Callback when a task is clicked
-- `onTaskToggle`: Callback when task completion is toggled
-- `onTaskDelete`: Callback when task is deleted
-- `loading`: Whether the task list is loading
-- `emptyMessage`: Message to show when no tasks exist (default: "No tasks found")
+- `taskId`: The ID of the task to toggle
+- `completed`: Current completion status
+- `onToggle`: Callback when toggle is clicked
 
-**State**:
-- `filter`: Current filter state (all, completed, incomplete)
-- `searchQuery`: Current search query
-- `priorityFilter`: Priority filter (all, low, medium, high, urgent)
+**Features**:
+- Visual indication of completion status
+- Interactive toggle functionality
+- Loading state during API calls
 
-#### TaskItem
-**Purpose**: Displays a single task with interactive elements
-**Location**: `src/components/tasks/task-item.tsx`
+#### SearchFilter
+**Purpose**: Provides search and filter functionality for task lists
+**Location**: `src/components/SearchFilter.tsx`
 **Props**:
-- `task`: Task object to display
-- `onToggle`: Callback when task completion is toggled
-- `onEdit`: Callback when task edit is requested
-- `onDelete`: Callback when task delete is requested
-- `showActions`: Whether to show action buttons (default: true)
+- `onFilterChange`: Callback when filter parameters change
 
-**State**:
-- `isHovered`: Whether the task item is being hovered
-- `showDeleteConfirm`: Whether to show delete confirmation
+**Features**:
+- Search input for task titles/descriptions
+- Priority filter dropdown
+- Completion status filter
+- Real-time filtering as user types
 
 #### TaskForm
 **Purpose**: Form for creating or editing tasks
-**Location**: `src/components/tasks/task-form.tsx`
+**Location**: `src/components/TaskForm.tsx`
+**Props**: None (handles creation internally)
+
+**Features**:
+- Title input field
+- Description text area
+- Priority selection dropdown
+- Form validation
+- Loading state during submission
+- Ability to add new tasks
+
+### 2. AI Chatbot Components (Phase III: Agentic Foundation)
+
+#### ChatInterface
+**Purpose**: Main chat interface for interacting with the AI agent
+**Location**: `src/components/chat/chat-interface.tsx`
 **Props**:
-- `initialData`: Initial task data for editing (optional)
-- `onSubmit`: Callback when form is submitted
-- `onCancel`: Callback when form is cancelled
-- `submitText`: Text for submit button (default: "Save Task")
+- `userId`: String, required - The ID of the authenticated user
+- `onTaskCreated`: Callback when AI creates a task
+- `onTaskUpdated`: Callback when AI updates a task
+- `onTaskDeleted`: Callback when AI deletes a task
+- `onConversationStart`: Callback when new conversation starts
+- `onConversationEnd`: Callback when conversation ends
 
 **State**:
-- `title`: Task title input
-- `description`: Task description input
-- `priority`: Task priority selection
-- `errors`: Form validation errors
-- `submitting`: Submit button loading state
+- `messages`: Array of chat messages (user and AI)
+- `inputValue`: Current user input text
+- `isLoading`: Whether AI is processing the request
+- `conversationId`: Current conversation ID (null for new conversation)
+- `error`: Error message if chat fails
 
-#### TaskDetail
-**Purpose**: Displays detailed information about a single task
-**Location**: `src/components/tasks/task-detail.tsx`
+#### ChatMessage
+**Purpose**: Displays a single chat message from user or AI
+**Location**: `src/components/chat/chat-message.tsx`
 **Props**:
-- `task`: Task object to display
-- `onEdit`: Callback when edit is requested
-- `onBack`: Callback when back button is clicked
+- `message`: Message object with content, role (user/assistant), and timestamp
+- `isOwnMessage`: Whether this is the current user's message
+- `showAvatar`: Whether to show avatar (default: true)
 
-### 3. UI Components
-
-#### Button
-**Purpose**: Reusable button component with various styles
-**Location**: `src/components/ui/button.tsx`
-**Props**:
-- `variant`: Style variant (primary, secondary, ghost, link) (default: primary)
-- `size`: Size variant (sm, md, lg) (default: md)
-- `loading`: Whether button is in loading state
-- `disabled`: Whether button is disabled
-- `children`: Button content
-- `onClick`: Click handler
-- `className`: Additional CSS classes
-
-#### Input
-**Purpose**: Reusable input component with validation
-**Location**: `src/components/ui/input.tsx`
-**Props**:
-- `type`: Input type (text, email, password, etc.) (default: text)
-- `placeholder`: Input placeholder text
-- `value`: Input value
-- `onChange`: Change handler
-- `error`: Error message to display
-- `label`: Label text (optional)
-- `required`: Whether field is required
-- `className`: Additional CSS classes
-
-#### Select
-**Purpose**: Reusable select component
-**Location**: `src/components/ui/select.tsx`
-**Props**:
-- `options`: Array of option objects {value: string, label: string}
-- `value`: Current selected value
-- `onChange`: Change handler
-- `placeholder`: Placeholder text
-- `error`: Error message to display
-- `label`: Label text (optional)
-- `className`: Additional CSS classes
-
-#### Modal
-**Purpose**: Reusable modal component
-**Location**: `src/components/ui/modal.tsx`
-**Props**:
-- `isOpen`: Whether modal is open
-- `onClose`: Close handler
-- `title`: Modal title
-- `children`: Modal content
-- `size`: Modal size (sm, md, lg, xl) (default: md)
-
-#### LoadingSpinner
-**Purpose**: Loading indicator component
-**Location**: `src/components/ui/loading-spinner.tsx`
-**Props**:
-- `size`: Spinner size (sm, md, lg) (default: md)
-- `className`: Additional CSS classes
-
-#### Alert
-**Purpose**: Alert message component for notifications
-**Location**: `src/components/ui/alert.tsx`
-**Props**:
-- `type`: Alert type (success, error, warning, info) (default: info)
-- `message`: Alert message content
-- `showIcon`: Whether to show icon (default: true)
-- `onClose`: Close handler (optional)
-- `className`: Additional CSS classes
-
-### 4. Layout Components
-
-#### Header
-**Purpose**: Application header with navigation and user controls
-**Location**: `src/components/layout/header.tsx`
-**Props**: None
 **State**:
-- `mobileMenuOpen`: Whether mobile menu is open
+- `isExpanded`: Whether long messages are expanded
+
+#### ChatInput
+**Purpose**: Input field for sending messages to the AI agent
+**Location**: `src/components/chat/chat-input.tsx`
+**Props**:
+- `value`: Current input value
+- `onChange`: Handler for input changes
+- `onSend`: Handler for sending message
+- `disabled`: Whether input is disabled (default: false)
+- `placeholder`: Input placeholder text (default: "Type your task request...")
+
+**State**:
+- `isFocused`: Whether input is focused
+
+#### ConversationHistory
+**Purpose**: Displays conversation history and allows switching between conversations
+**Location**: `src/components/chat/conversation-history.tsx`
+**Props**:
+- `conversations`: Array of conversation objects
+- `onConversationSelect`: Callback when conversation is selected
+- `onConversationDelete`: Callback when conversation is deleted
+- `loading`: Whether conversations are loading
+
+**State**:
+- `selectedConversationId`: Currently selected conversation ID
+- `showDeleteConfirm`: Whether to show delete confirmation
+
+#### TaskSuggestion
+**Purpose**: Displays suggested tasks based on AI interpretation of user input
+**Location**: `src/components/chat/task-suggestion.tsx`
+**Props**:
+- `suggestions`: Array of suggested tasks
+- `onAccept`: Callback when suggestion is accepted
+- `onReject`: Callback when suggestion is rejected
+- `showActions`: Whether to show accept/reject buttons (default: true)
+
+**State**:
+- `accepted`: Whether the suggestion has been accepted
+
+
+
+### 3. Layout Components
 
 #### Navigation
 **Purpose**: Main navigation menu
-**Location**: `src/components/layout/navigation.tsx`
-**Props**:
-- `items`: Array of navigation items {name: string, href: string, current: boolean}
+**Location**: `src/components/Navigation.tsx`
 
-#### ProtectedRoute
-**Purpose**: Wrapper component that requires authentication
-**Location**: `src/components/layout/protected-route.tsx`
-**Props**:
-- `children`: Content to render when authenticated
-- `fallback`: Fallback content when not authenticated (default: redirect to login)
-
-#### Layout
-**Purpose**: Main application layout with header, sidebar, and content
-**Location**: `src/components/layout/layout.tsx`
-**Props**:
-- `children`: Main content
-- `sidebar`: Sidebar content (optional)
-- `header`: Custom header (optional)
+**Features**:
+- Navigation links to different parts of the application
+- Mobile-responsive design
+- Active link highlighting
 
 ## Component Interfaces
 
@@ -240,18 +165,6 @@ interface User {
 }
 ```
 
-## Design System
-
-### Color Palette
-- **Primary**: `#3B82F6` (blue-500) - Primary actions and highlights
-- **Secondary**: `#6B7280` (gray-500) - Secondary actions and text
-- **Success**: `#10B981` (emerald-500) - Success states and positive actions
-- **Warning**: `#F59E0B` (amber-500) - Warning states
-- **Error**: `#EF4444` (red-500) - Error states and destructive actions
-- **Background**: `#FFFFFF` (white) - Main background
-- **Surface**: `#F9FAFB` (gray-50) - Secondary surfaces
-- **Text**: `#1F2937` (gray-800) - Primary text
-- **Text Secondary**: `#6B7280` (gray-500) - Secondary text
 
 ### Typography
 - **Heading 1**: `font-bold text-3xl` - Main page titles

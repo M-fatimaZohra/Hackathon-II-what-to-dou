@@ -1,7 +1,7 @@
 # System Architecture: AI Native Todo Application
 
 ## Overview
-The AI Native Todo Application follows a modern full-stack architecture with clear separation between frontend and backend components. The system uses a REST API for communication between the Next.js frontend and FastAPI backend, with Neon Serverless PostgreSQL providing persistent storage.
+The AI Native Todo Application follows a modern full-stack architecture with clear separation between frontend and backend components. The system uses a REST API for communication between the Next.js frontend and FastAPI backend, with Neon Serverless PostgreSQL providing persistent storage. The architecture includes an AI agent layer with MCP SDK integration for natural language processing.
 
 ## Architecture Diagram
 ```
@@ -13,15 +13,36 @@ The AI Native Todo Application follows a modern full-stack architecture with cle
 │  Tailwind CSS   │                 │  SQLModel       │
 │  Better Auth    │                 │  JWT Auth       │
 └─────────────────┘                 └──────────────────┘
-                                            │
-                                            │ Database
-                                            ▼
-                                ┌─────────────────────────┐
-                                │    Database             │
-                                │                         │
-                                │  Neon Serverless        │
-                                │  PostgreSQL             │
-                                └─────────────────────────┘
+                                          │
+                              ┌─────────────┼─────────────┐
+                              │             │             │
+                              │      ┌──────▼──────┐     │
+                              │      │    MCP      │     │
+                              │      │   Server    │     │
+                              │      └─────────────┘     │
+                              │             │             │
+                              │      ┌──────▼──────┐     │
+                              │      │   OpenAI    │     │
+                              │      │   Agent     │     │
+                              │      └─────────────┘     │
+                              │                          │
+                              │      ┌───────────────────▼──────────────────┐
+                              │      │             Database                 │
+                              │      │                                      │
+                              │      │  Neon Serverless                     │
+                              │      │  PostgreSQL                          │
+                              │      │  - Users (Better Auth)              │
+                              │      │  - Tasks                            │
+                              │      │  - Conversations                    │
+                              │      │  - Messages                         │
+                              │      └──────────────────────────────────────┘
+                              │
+                              │      ┌──────────────────────────────────────┐
+                              │      │        Environment Toggle            │
+                              │      │  - Development: localhost:3000     │
+                              │      │  - Production: deployed domain       │
+                              │      │  - CORS, logging, and reload config  │
+                              │      └──────────────────────────────────────┘
 ```
 
 ## Component Breakdown
@@ -39,12 +60,19 @@ The AI Native Todo Application follows a modern full-stack architecture with cle
 - **ORM**: SQLModel for database modeling and operations
 - **Authentication**: JWT tokens for secure API access
 - **API Design**: RESTful endpoints following standard conventions
+- **AI Integration**: MCP SDK and OpenAI Agents SDK for natural language processing
+
+### MCP Server Architecture
+- **Protocol**: Official MCP SDK for standardized AI agent communication
+- **Tools**: Specialized tools for task management operations (create, read, update, delete, complete)
+- **Integration**: Seamless connection between AI agent and backend services
+- **Security**: Validates user permissions for each AI-initiated action
 
 ### Database Architecture
 - **Database**: Neon Serverless PostgreSQL for scalable, serverless database
-- **Schema**: Users (managed by Better Auth) and Tasks tables with foreign key relationships
+- **Schema**: Users (managed by Better Auth), Tasks, Conversations, and Messages tables with foreign key relationships
 - **Security**: Row-level security to ensure user data isolation
-- **Indexing**: Proper indexing for search and filter operations
+- **Indexing**: Proper indexing for search, filter, and conversation history operations
 
 ## Data Flow
 
@@ -62,6 +90,22 @@ The AI Native Todo Application follows a modern full-stack architecture with cle
 4. Tasks are returned to frontend
 5. User can create, read, update, or delete tasks
 6. All operations are validated to ensure user owns the task
+
+### AI Chatbot Flow
+1. User sends natural language message to `/api/{user_id}/chat` endpoint
+2. Backend validates JWT and extracts user ID
+3. Conversation history is fetched from database
+4. MCP server processes natural language with OpenAI Agent
+5. Appropriate MCP tools are called based on agent interpretation
+6. Task operations are performed with user permission validation
+7. Response and new message are stored in database
+8. Response is returned to frontend
+
+### Environment Toggle Flow
+1. `ENVIRONMENT` variable determines configuration mode
+2. Development mode enables CORS for localhost, hot reloading, and verbose logging
+3. Production mode restricts CORS to specified domains and minimizes logging
+4. Database connections and other resources adapt to environment requirements
 
 ## Security Architecture
 
@@ -82,6 +126,12 @@ The AI Native Todo Application follows a modern full-stack architecture with cle
 - User ID is extracted from JWT (not client-provided)
 - Proper authorization checks for all operations
 - Rate limiting to prevent abuse
+
+### AI Agent Security
+- MCP tools validate user permissions for each operation
+- Natural language input is sanitized before processing
+- Conversation access is restricted to owning user
+- Tool calls are logged for audit trails
 
 ## Deployment Architecture
 
@@ -114,6 +164,12 @@ The AI Native Todo Application follows a modern full-stack architecture with cle
 - Proper transaction management
 - Query optimization and indexing
 
+### Backend-MCP Server Integration
+- Standardized MCP protocol for AI agent communication
+- Tool-based architecture for specific task operations
+- Secure validation of all AI-initiated actions
+- Conversation history management
+
 ## Scalability Considerations
 
 ### Horizontal Scaling
@@ -127,8 +183,15 @@ The AI Native Todo Application follows a modern full-stack architecture with cle
 - Optimized API responses
 - Efficient data fetching patterns
 
+### AI Agent Scaling
+- Stateless agent operations (fetch history, process, store result)
+- Efficient conversation history retrieval
+- MCP tool optimization for common operations
+
 ## Monitoring and Observability
 - API request logging and monitoring
 - Database query performance tracking
 - Error tracking and alerting
 - User session monitoring for security
+- AI agent interaction logging
+- MCP tool usage analytics

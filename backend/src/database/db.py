@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
-load_dotenv()
+load_dotenv(override=True)
 
 # Database configuration - prioritize NEON_DATABASE_URL, fall back to DATABASE_URL, then SQLite
 DATABASE_URL = os.getenv("NEON_DATABASE_URL") or os.getenv("DATABASE_URL", "sqlite:///./todo_app.db")

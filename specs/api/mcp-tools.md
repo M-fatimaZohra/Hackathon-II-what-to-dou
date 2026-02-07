@@ -1,276 +1,259 @@
 # MCP Tools and Commands: AI Native Todo Application
 
 ## Overview
-This document specifies the Model Context Protocol (MCP) tools and commands available for implementing and managing the AI Native Todo Application. These tools facilitate development, testing, deployment, and monitoring of the application.
+This document specifies the Model Context Protocol (MCP) tools for the AI Native Todo Application. These tools are built using the Official MCP SDK to enable AI agents to perform CRUD operations on tasks through natural language interactions. The MCP tools provide a standardized interface between AI agents and the task management system.
 
-## Development Tools
+## MCP Tool Return Contract (Updated)
 
-### 1. Project Setup and Initialization
-**Tool**: `setup-project`
-**Description**: Initialize the complete project structure with all necessary configurations.
+To prevent agent "fallback errors" and improve LLM parsing reliability, all MCP tools now return descriptive string receipts instead of structured JSON objects. This approach uses LLM-native string responses that are more reliably transmitted through the Stdio communication channel.
 
-**Parameters**:
-- `--frontend`: Setup Next.js frontend (default: true)
-- `--backend`: Setup FastAPI backend (default: true)
-- `--database`: Setup database configuration (default: true)
-- `--auth`: Setup authentication (default: true)
+**Return Format**: All tools return descriptive strings in the format:
+- Success: `"SUCCESS: [Action completed] (ID: [id])"`
+- Error: `"ERROR: [Reason]"`
 
-**Usage**:
-```bash
-mcp setup-project --frontend --backend --database --auth
+**Important**: Task IDs in return strings are for AI memory only and should be hidden from the end-user in the final UI response.
+
+## Official MCP SDK Integration
+
+The application integrates with the Official MCP SDK to provide AI agents with secure, standardized access to task management functionality. All MCP tools validate user permissions and maintain data isolation.
+
+## MCP Tools for AI Agents
+
+### 1. add_task
+**Description**: Create a new task based on natural language input from the AI agent.
+
+**Input Parameters**:
+- `user_id`: String, required - The ID of the user creating the task (validated against JWT)
+- `title`: String, required - The title of the task
+- `description`: String, optional - Detailed description of the task
+
+**Output**:
+- Returns descriptive string receipt with task details for AI memory and user feedback
+
+**Security**: Validates that the requesting user has permission to create tasks for the specified user_id. Requires auth_user_id to be passed from service layer via ctx.request_context.
+
+**Usage Example**:
+```json
+{
+  "function": "add_task",
+  "arguments": {
+    "user_id": "user_12345",
+    "title": "Buy groceries",
+    "description": "Milk, eggs, bread"
+  }
+}
 ```
 
-### 2. Code Generation
-**Tool**: `generate-component`
-**Description**: Generate frontend components based on specifications.
-
-**Parameters**:
-- `--type`: Component type (page, component, layout)
-- `--name`: Component name
-- `--features`: Features to include (auth, forms, etc.)
-
-**Usage**:
-```bash
-mcp generate-component --type page --name login --features auth
+**Expected Response**:
+```
+SUCCESS: Created task 'Buy groceries' (ID: 5)
 ```
 
-**Tool**: `generate-api`
-**Description**: Generate API endpoints based on specifications.
+### 2. list_tasks
+**Description**: Retrieve tasks from the list based on natural language query from the AI agent.
 
-**Parameters**:
-- `--resource`: Resource name (e.g., task, user)
-- `--operations`: Operations to generate (CRUD operations)
+**Input Parameters**:
+- `user_id`: String, required - The ID of the user whose tasks to retrieve (validated against JWT)
+- `status`: String, optional - Filter by status ("all", "pending", "completed")
 
-**Usage**:
-```bash
-mcp generate-api --resource task --operations create,read,update,delete
+**Output**: Returns descriptive string receipt listing matching tasks for AI memory and user feedback
+
+**Security**: Validates that the requesting user has permission to access tasks for the specified user_id. Requires auth_user_id to be passed from service layer via ctx.request_context.
+
+**Usage Example**:
+```json
+{
+  "function": "list_tasks",
+  "arguments": {
+    "user_id": "user_12345",
+    "status": "pending"
+  }
+}
 ```
 
-### 3. Database Management
-**Tool**: `db-migrate`
-**Description**: Run database migrations.
-
-**Parameters**:
-- `--up`: Run pending migrations (default)
-- `--down`: Rollback migrations
-- `--status`: Show migration status
-
-**Usage**:
-```bash
-mcp db-migrate --up
+**Expected Response**:
+```
+SUCCESS: Found 1 task for user (ID: 1): 'Buy groceries' (pending)
 ```
 
-**Tool**: `db-seed`
-**Description**: Seed the database with initial data.
+### 3. complete_task
+**Description**: Mark a task as complete based on natural language input from the AI agent.
 
-**Parameters**:
-- `--env`: Environment (dev, staging, prod)
-- `--reset`: Reset database before seeding
+**Input Parameters**:
+- `user_id`: String, required - The ID of the user who owns the task (validated against JWT)
+- `task_id`: Integer, required - The ID of the task to update
 
-**Usage**:
-```bash
-mcp db-seed --env dev --reset
+**Output**: Returns descriptive string receipt with completion details for AI memory and user feedback
+
+**Security**: Validates that the requesting user owns the task being updated. Requires auth_user_id to be passed from service layer via ctx.request_context.
+
+**Usage Example**:
+```json
+{
+  "function": "complete_task",
+  "arguments": {
+    "user_id": "user_12345",
+    "task_id": 3
+  }
+}
 ```
 
-## Testing Tools
-
-### 4. Unit Testing
-**Tool**: `test-unit`
-**Description**: Run unit tests for both frontend and backend.
-
-**Parameters**:
-- `--frontend`: Run frontend tests (default: true)
-- `--backend`: Run backend tests (default: true)
-- `--coverage`: Generate coverage report
-- `--watch`: Watch mode for development
-
-**Usage**:
-```bash
-mcp test-unit --frontend --backend --coverage
+**Expected Response**:
+```
+SUCCESS: Completed task 'Call mom' (ID: 3)
 ```
 
-### 5. Integration Testing
-**Tool**: `test-integration`
-**Description**: Run integration tests for API endpoints and database operations.
+### 4. delete_task
+**Description**: Remove a task from the list based on natural language input from the AI agent.
 
-**Parameters**:
-- `--api`: Test API endpoints (default: true)
-- `--database`: Test database operations
-- `--auth`: Test authentication flows
+**Input Parameters**:
+- `user_id`: String, required - The ID of the user who owns the task (validated against JWT)
+- `task_id`: Integer, required - The ID of the task to delete
 
-**Usage**:
-```bash
-mcp test-integration --api --database --auth
+**Output**: Returns descriptive string receipt with deletion details for AI memory and user feedback
+
+**Security**: Validates that the requesting user owns the task being deleted. Requires auth_user_id to be passed from service layer via ctx.request_context.
+
+**Usage Example**:
+```json
+{
+  "function": "delete_task",
+  "arguments": {
+    "user_id": "user_12345",
+    "task_id": 2
+  }
+}
 ```
 
-### 6. Security Testing
-**Tool**: `test-security`
-**Description**: Run security tests including authentication and data isolation.
-
-**Parameters**:
-- `--auth`: Test authentication mechanisms
-- `--data-isolation`: Test user data isolation
-- `--input-validation`: Test input validation
-
-**Usage**:
-```bash
-mcp test-security --auth --data-isolation --input-validation
+**Expected Response**:
+```
+SUCCESS: Deleted task 'Old task' (ID: 2)
 ```
 
-## Deployment Tools
+### 5. update_task
+**Description**: Modify task title or description based on natural language input from the AI agent.
 
-### 7. Environment Management
-**Tool**: `env-setup`
-**Description**: Set up environment-specific configurations.
+**Input Parameters**:
+- `user_id`: String, required - The ID of the user who owns the task (validated against JWT)
+- `task_id`: Integer, required - The ID of the task to update
+- `title`: String, optional - New title for the task
+- `description`: String, optional - New description for the task
 
-**Parameters**:
-- `--env`: Environment (dev, staging, prod)
-- `--create`: Create new environment
-- `--update`: Update existing environment
+**Output**: Returns descriptive string receipt with update details for AI memory and user feedback
 
-**Usage**:
-```bash
-mcp env-setup --env staging --create
+**Security**: Validates that the requesting user owns the task being updated. Requires auth_user_id to be passed from service layer via ctx.request_context.
+
+**Usage Example**:
+```json
+{
+  "function": "update_task",
+  "arguments": {
+    "user_id": "user_12345",
+    "task_id": 1,
+    "title": "Buy groceries and fruits"
+  }
+}
 ```
 
-### 8. Build and Deployment
-**Tool**: `build-app`
-**Description**: Build the application for deployment.
-
-**Parameters**:
-- `--frontend`: Build frontend (default: true)
-- `--backend`: Build backend (default: true)
-- `--target`: Build target (docker, static, serverless)
-
-**Usage**:
-```bash
-mcp build-app --frontend --backend --target docker
+**Expected Response**:
+```
+SUCCESS: Updated task to 'Buy groceries and fruits' (ID: 1)
 ```
 
-**Tool**: `deploy-app`
-**Description**: Deploy the application to the specified environment.
+## Authentication Context Propagation
+
+### Service Layer to MCP Tools
+All MCP tools require that the auth_user_id be explicitly passed from the service layer through the context parameter (ctx.request_context). The service layer must extract the authenticated user ID from the API request context and forward it to each MCP tool invocation.
+
+### Validation Flow
+1. API layer extracts auth_user_id from JWT token
+2. Service layer passes auth_user_id to MCP tools via context
+3. MCP tools validate that auth_user_id matches the user_id in the request parameters
+4. MCP tools perform user-specific operations with data isolation
+
+## MCP Server Configuration
+
+### MCP Server Startup
+**Command**: Configure and start the MCP server to expose the above tools to AI agents.
+
+**Configuration Parameters**:
+- `server_port`: Integer - Port for the MCP server (default: 8080)
+- `allowed_origins`: Array - Origins allowed to connect to the MCP server
+- `authentication_required`: Boolean - Whether authentication is required for tool access
+
+### Tool Registration
+All MCP tools are registered with the Official MCP SDK and follow MCP protocol specifications for standardized communication with AI agents.
+
+## Security Considerations
+
+### Permission Validation
+- All MCP tools validate that the requesting user has permission to perform the requested operation
+- User ID is extracted from JWT token and compared with the requested user_id parameter
+- Tools reject requests where user IDs don't match
+
+### Data Isolation
+- MCP tools ensure users can only access their own tasks
+- All queries are filtered by user_id to maintain data isolation
+- Cross-user data access is prevented through server-side validation
+
+### Input Sanitization
+- All inputs from AI agents are validated before processing
+- MCP tools sanitize inputs to prevent injection attacks
+- Input validation follows the same patterns as regular API endpoints
+
+## AI Agent Tools (Phase III: Agentic Foundation)
+
+### 16. Official MCP SDK Integration
+**Tool**: `mcp-server-start`
+**Description**: Start the official MCP server with registered tools for AI agent communication.
 
 **Parameters**:
-- `--env`: Target environment (dev, staging, prod)
-- `--frontend`: Deploy frontend
-- `--backend`: Deploy backend
-- `--database`: Migrate database
+- `--config`: Path to MCP server configuration file
+- `--port`: Port to run the MCP server on (default: 8080)
+- `--implementation`: MCP server implementation type
 
 **Usage**:
 ```bash
-mcp deploy-app --env staging --frontend --backend --database
+mcp mcp-server-start --config ./mcp-config.json --port 8080
 ```
 
-## Monitoring and Maintenance Tools
+**Tool**: `register-mcp-tools`
+**Description**: Register MCP tools with the official MCP SDK for task management operations.
 
-### 9. Health Checks
-**Tool**: `health-check`
-**Description**: Check the health of application components.
+**Registered Tools** (using Official MCP SDK):
+- `add_task`: Create a new task based on natural language input
+- `list_tasks`: Retrieve tasks from the list based on natural language query
+- `complete_task`: Mark a task as complete based on natural language input
+- `delete_task`: Remove a task from the list based on natural language input
+- `update_task`: Modify task title or description based on natural language input
 
-**Parameters**:
-- `--frontend`: Check frontend health
-- `--backend`: Check backend health
-- `--database`: Check database health
-- `--auth`: Check authentication service health
+**Implementation Details**:
+- Built using Official MCP SDK for standardized AI agent communication
+- Each tool validates user permissions for security
+- Tools follow MCP protocol specifications for interoperability
 
 **Usage**:
 ```bash
-mcp health-check --frontend --backend --database
+mcp register-mcp-tools --implementation official-sdk
 ```
 
-### 10. Performance Testing
-**Tool**: `perf-test`
-**Description**: Run performance and load tests on the application.
+### 17. MCP Integration Testing
+**Tool**: `test-mcp-integration`
+**Description**: Test the integration between MCP server and the task management system.
 
 **Parameters**:
-- `--concurrent-users`: Number of concurrent users to simulate
-- `--duration`: Test duration in seconds
-- `--endpoints`: Specific endpoints to test
+- `--scenarios`: Test scenarios to run (mcp_protocol, task_operations, conversation_context)
+- `--mock-services`: Use mock services instead of real backend
+- `--verbose`: Enable verbose output for debugging
 
 **Usage**:
 ```bash
-mcp perf-test --concurrent-users 100 --duration 300
-```
-
-### 11. Log Analysis
-**Tool**: `analyze-logs`
-**Description**: Analyze application logs for errors and performance issues.
-
-**Parameters**:
-- `--timeframe`: Time range for analysis (last-hour, last-day, custom)
-- `--level`: Log level filter (error, warn, info)
-- `--output`: Output format (console, json, report)
-
-**Usage**:
-```bash
-mcp analyze-logs --timeframe last-hour --level error --output report
-```
-
-## Configuration Management
-
-### 12. Spec Validation
-**Tool**: `validate-specs`
-**Description**: Validate all specification documents for consistency and completeness.
-
-**Parameters**:
-- `--specs-dir`: Directory containing specification files
-- `--validate-links`: Check internal links in specs
-- `--check-completeness`: Verify all required sections exist
-
-**Usage**:
-```bash
-mcp validate-specs --specs-dir specs --check-completeness
-```
-
-### 13. Dependency Management
-**Tool**: `update-dependencies`
-**Description**: Update project dependencies to latest compatible versions.
-
-**Parameters**:
-- `--frontend`: Update frontend dependencies
-- `--backend`: Update backend dependencies
-- `--dry-run`: Show what would be updated without making changes
-- `--security-only`: Only update dependencies with security fixes
-
-**Usage**:
-```bash
-mcp update-dependencies --frontend --backend --dry-run
-```
-
-## Quality Assurance Tools
-
-### 14. Code Quality
-**Tool**: `check-quality`
-**Description**: Run code quality checks including linting and formatting.
-
-**Parameters**:
-- `--frontend`: Check frontend code quality
-- `--backend`: Check backend code quality
-- `--fix`: Automatically fix fixable issues
-- `--format`: Format code according to standards
-
-**Usage**:
-```bash
-mcp check-quality --frontend --backend --fix --format
-```
-
-### 15. Documentation Generation
-**Tool**: `generate-docs`
-**Description**: Generate API and component documentation from code.
-
-**Parameters**:
-- `--api`: Generate API documentation
-- `--components`: Generate component documentation
-- `--output`: Output directory for documentation
-
-**Usage**:
-```bash
-mcp generate-docs --api --components --output docs/generated
+mcp test-mcp-integration --scenarios mcp_protocol,task_operations --verbose
 ```
 
 ## Troubleshooting Tools
 
-### 16. Debug Setup
+### 18. Debug Setup
 **Tool**: `debug-setup`
 **Description**: Set up debugging configuration for development.
 
@@ -278,13 +261,14 @@ mcp generate-docs --api --components --output docs/generated
 - `--frontend`: Enable frontend debugging
 - `--backend`: Enable backend debugging
 - `--database`: Enable database query logging
+- `--mcp`: Enable MCP server debugging
 
 **Usage**:
 ```bash
-mcp debug-setup --frontend --backend --database
+mcp debug-setup --frontend --backend --database --mcp
 ```
 
-### 17. Rollback Operations
+### 19. Rollback Operations
 **Tool**: `rollback-deployment`
 **Description**: Rollback deployment to a previous version.
 

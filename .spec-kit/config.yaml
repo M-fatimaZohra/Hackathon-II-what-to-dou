@@ -1,5 +1,5 @@
 name: 00-ai-native-todo-app
-version: "1.0"
+version: "4.0"
 structure:
   specs_dir: specs
   features_dir: specs/features
@@ -12,3 +12,7 @@ phases:
     features: [todo_crud]
   - name: 002-todo-web-app
     features: [todo_crud, authentication]
+  - name: 003-frontend-hardening
+    features: [todo_crud, authentication, ui_improvements]
+  - name: 004-agentic-foundation
+    features: [todo_crud, authentication, ai_chatbot, mcp_integration, conversation_management]

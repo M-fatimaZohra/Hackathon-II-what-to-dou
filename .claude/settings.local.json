@@ -5,7 +5,9 @@
       "mcp__context7__query-docs",
       "mcp__next-devtools__nextjs_call",
       "mcp__next-devtools__nextjs_docs",
-      "WebSearch"
+      "WebSearch",
+      "Bash(bash \".specify/scripts/bash/check-prerequisites.sh\" --json --require-tasks --include-tasks)",
+      "Bash(dir \"D:\\\\mirab_important\\\\code\\\\Q4_Era_of_New_AICLI\\\\Hackathon\\\\Hackathon2025\\\\Hackathon-II\\\\00-ai-native-todo-app\\\\backend\\\\src\\\\services\")"
     ]
   }
 }

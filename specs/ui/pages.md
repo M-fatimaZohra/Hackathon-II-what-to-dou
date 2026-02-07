@@ -7,13 +7,11 @@ This document specifies the pages for the AI Native Todo Application. Each page 
 
 ### Authentication Pages
 
-#### Login Page
-**Path**: `/login`
+#### Sign In Page
+**Path**: `/signin`
 **Purpose**: Allow users to sign in to their accounts
 **Components Used**:
-- `Layout` (header, navigation)
-- `LoginForm`
-- `Alert` (for error messages)
+- Components from `src/components/` (TaskList, TaskForm, etc.)
 
 **Features**:
 - Email and password input fields
@@ -21,7 +19,6 @@ This document specifies the pages for the AI Native Todo Application. Each page 
 - Loading state during authentication
 - Link to sign up page
 - Error messaging for failed authentication attempts
-- Remember me functionality (optional)
 
 **Data Requirements**:
 - None (public page)
@@ -29,8 +26,8 @@ This document specifies the pages for the AI Native Todo Application. Each page 
 **User Flow**:
 1. User enters email and password
 2. Form validation occurs
-3. Authentication API is called
-4. On success: redirect to dashboard/task list
+3. Better Auth API is called
+4. On success: redirect to tasks page
 5. On failure: show error message
 
 #### Sign Up Page
@@ -88,34 +85,6 @@ This document specifies the pages for the AI Native Todo Application. Each page 
 
 ### Dashboard and Task Management Pages
 
-#### Dashboard Page
-**Path**: `/dashboard`
-**Purpose**: Provide an overview of user's tasks and quick actions
-**Components Used**:
-- `Layout` (header, navigation)
-- `ProtectedRoute`
-- `TaskList` (with limited items)
-- `Button` (for quick task creation)
-- `LoadingSpinner` (if loading)
-
-**Features**:
-- Welcome message with user information
-- Summary of tasks (total, completed, pending)
-- Quick task creation button
-- Recent tasks list
-- Links to full task list
-- Statistics or insights (optional)
-
-**Data Requirements**:
-- Authenticated user
-- User's recent tasks
-- Task summary statistics
-
-**User Flow**:
-1. User navigates to dashboard
-2. Page checks authentication
-3. Fetches user data and recent tasks
-4. Displays dashboard content
 
 #### Task List Page
 **Path**: `/tasks`
@@ -150,98 +119,47 @@ This document specifies the pages for the AI Native Todo Application. Each page 
 4. Displays tasks in list format
 5. Allows user to interact with tasks (edit, delete, toggle)
 
-#### Task Detail Page
-**Path**: `/tasks/[id]`
-**Purpose**: Show detailed information about a specific task
+
+
+
+### AI Chatbot Pages (Phase III: Agentic Foundation)
+
+#### Chat Page
+**Path**: `/chat`
+**Purpose**: Provide an AI-powered interface for natural language task management
 **Components Used**:
 - `Layout` (header, navigation)
 - `ProtectedRoute`
-- `TaskDetail`
-- `Button` (for edit/delete actions)
+- `ChatInterface`
+- `ConversationHistory`
+- `LoadingSpinner` (if loading)
 
 **Features**:
-- Full task details display
-- Edit task button
-- Delete task button
-- Back to task list button
-- Loading state during data fetch
-- Error handling for invalid task IDs
+- Real-time chat interface with AI agent
+- Natural language processing for task creation/modification
+- Conversation history management
+- Task suggestions based on AI interpretation
+- Context-aware responses from AI
+- Loading states during AI processing
+- Error handling for API failures
 
 **Data Requirements**:
 - Authenticated user
-- Specific task data by ID
-- User permission to access the task
+- User's conversation history
+- Current conversation context
+- AI agent connectivity
 
 **User Flow**:
-1. User navigates to specific task URL
+1. User navigates to chat page
 2. Page checks authentication
-3. Fetches specific task data
-4. Verifies user has permission to access task
-5. Displays task details
-6. If task not found or user lacks permission, shows error
-
-#### Create Task Page
-**Path**: `/tasks/create`
-**Purpose**: Allow users to create new tasks
-**Components Used**:
-- `Layout` (header, navigation)
-- `ProtectedRoute`
-- `TaskForm`
-- `Button` (for cancel)
-
-**Features**:
-- Task creation form
-- Title, description, and priority inputs
-- Form validation
-- Loading state during creation
-- Cancel option
-- Success feedback after creation
-
-**Data Requirements**:
-- Authenticated user
-
-**User Flow**:
-1. User navigates to create task page
-2. Page checks authentication
-3. User fills out task form
-4. Form validation occurs
-5. Task creation API is called
-6. On success: redirect to task list with success message
-7. On failure: show error message
-
-#### Edit Task Page
-**Path**: `/tasks/[id]/edit`
-**Purpose**: Allow users to edit existing tasks
-**Components Used**:
-- `Layout` (header, navigation)
-- `ProtectedRoute`
-- `TaskForm`
-- `Button` (for cancel)
-
-**Features**:
-- Pre-filled task form with existing data
-- Title, description, and priority inputs
-- Form validation
-- Loading state during update
-- Cancel option
-- Success feedback after update
-
-**Data Requirements**:
-- Authenticated user
-- Specific task data by ID
-- User permission to edit the task
-
-**User Flow**:
-1. User navigates to edit task page
-2. Page checks authentication
-3. Fetches specific task data
-4. Verifies user has permission to edit task
-5. Displays pre-filled form
-6. User updates task information
-7. Form validation occurs
-8. Task update API is called
-9. On success: redirect to task detail with success message
-10. On failure: show error message
+3. Fetches user's conversation history
+4. Initializes chat interface with latest conversation or starts new
+5. User types natural language request (e.g., "Add a task to buy groceries")
+6. Request is sent to AI agent via chat API
+7. AI processes request and calls appropriate MCP tools
+8. Task operations are performed based on AI interpretation
+9. AI response is displayed with any task changes
+10. Conversation is saved to history
 
 ### Profile and Settings Pages
 
@@ -303,17 +221,14 @@ This document specifies the pages for the AI Native Todo Application. Each page 
 ## Page Navigation
 
 ### Public Routes
-- `/login` - Login page
+- `/signin` - Sign in page
 - `/signup` - Sign up page
 - `/forgot-password` - Password reset
-- `/` - Landing page (redirects to dashboard if authenticated)
+- `/` - Landing page (redirects to tasks if authenticated)
 
 ### Protected Routes
-- `/dashboard` - Dashboard for authenticated users
 - `/tasks` - Task list for authenticated users
-- `/tasks/create` - Task creation for authenticated users
-- `/tasks/[id]` - Task details for authenticated users
-- `/tasks/[id]/edit` - Task editing for authenticated users
+- `/chat` - AI-powered chat interface for task management
 - `/profile` - User profile for authenticated users
 - `/settings` - User settings for authenticated users
 

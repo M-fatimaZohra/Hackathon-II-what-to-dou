@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Load environment variables from .env file
-load_dotenv()
+load_dotenv(override=True)
 
 # JWT configuration
 JWT_SECRET = os.getenv("BETTER_AUTH_SECRET", "your-default-secret-change-in-production")

@@ -270,3 +270,10 @@ Wait for consent; never auto-create ADRs. Group related decisions (stacks, authe
 
 ## Code Standards
 See `.specify/memory/constitution.md` for code quality, testing, performance, security, and architecture principles.
+
+## Active Technologies
+- Python 3.11, FastAPI 0.104.1, SQLModel 0.0.16, Neon PostgreSQL + FastAPI, SQLModel ORM, OpenAI Agents SDK, Official MCP SDK, python-jose, psycopg2-binary (004-agentic-foundation)
+- Neon PostgreSQL database with existing Task table and new Conversation/Message tables (004-agentic-foundation)
+
+## Recent Changes
+- 004-agentic-foundation: Added Python 3.11, FastAPI 0.104.1, SQLModel 0.0.16, Neon PostgreSQL + FastAPI, SQLModel ORM, OpenAI Agents SDK, Official MCP SDK, python-jose, psycopg2-binary

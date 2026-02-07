@@ -1,7 +1,7 @@
 # Database Schema: AI Native Todo Application
 
 ## Overview
-This document defines the database schema for the AI Native Todo Application. The application uses Neon Serverless PostgreSQL for persistent storage. The schema includes tables for users (managed by Better Auth) and tasks, with proper relationships and constraints to ensure data integrity and security.
+This document defines the database schema for the AI Native Todo Application. The application uses Neon Serverless PostgreSQL for persistent storage. The schema includes tables for users (managed by Better Auth), tasks, and new tables for AI chatbot functionality (conversations and messages), with proper relationships and constraints to ensure data integrity and security.
 
 ## Database Configuration
 - **Database Type**: PostgreSQL (Neon Serverless)
@@ -11,18 +11,31 @@ This document defines the database schema for the AI Native Todo Application. Th
 
 ## Schema Diagram
 ```
-+----------------+          +------------------+
-|    users       |          |     tasks        |
-|----------------|          |------------------|
-| id (PK)        |<---------| user_id (FK)     |
-| email          |          | id (PK)          |
-| email_verified |          | title            |
-| created_at     |          | description      |
-| updated_at     |          | completed        |
-+----------------+          | priority         |
-                           | created_at       |
-                           | updated_at       |
-                           +------------------+
++----------------+          +------------------+          +---------------+
+|    users       |          |  conversations   |          |    messages   |
+|----------------|          |------------------|          |---------------|
+| id (PK)        |<---------| user_id (FK)     |<---------| conversation_ |
+| email          |          | id (PK)          |          | id (FK)       |
+| email_verified |          | created_at       |          | id (PK)       |
+| created_at     |          | updated_at       |          | user_id (FK)  |
+| updated_at     |          +------------------+          | role          |
++----------------+                                         | content       |
+                                                          | created_at    |
+                                                                 |
+                                                    +------------+-------------+
+                                                    |                          |
+                                      +-------------------+    +-------------------+
+                                      |      tasks        |    |   task updates    |
+                                      |-------------------|    |-------------------|
+                                      | id (PK)           |    | id (PK)           |
+                                      | user_id (FK)      |    | conversation_id   |
+                                      | title             |    | task_id (FK)      |
+                                      | description       |    | update_type       |
+                                      | completed         |    | content           |
+                                      | priority          |    | created_at        |
+                                      | created_at        |    +-------------------+
+                                      | updated_at        |
+                                      +-------------------+
 ```
 
 ## Table Definitions
@@ -78,10 +91,61 @@ This table stores all user tasks with proper relationships to users:
 **Foreign Keys**:
 - `fk_tasks_user_id`: References users(id) with CASCADE on DELETE to remove tasks when user is deleted
 
+### Conversations Table
+This table stores chat session information for the AI chatbot functionality:
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | SERIAL | PRIMARY KEY, NOT NULL | Auto-incrementing conversation identifier |
+| user_id | VARCHAR(255) | NOT NULL, FOREIGN KEY | Reference to users table |
+| created_at | TIMESTAMP | NOT NULL, DEFAULT NOW() | Conversation creation timestamp |
+| updated_at | TIMESTAMP | NOT NULL, DEFAULT NOW() | Last update timestamp |
+
+**Indexes**:
+- `idx_conversations_user_id`: Index on user_id for fast user-based queries
+- `idx_conversations_created_at`: Index on created_at for chronological ordering
+
+**Constraints**:
+- `pk_conversations_id`: Primary key constraint on id
+- `fk_conversations_user_id`: Foreign key constraint linking to users table
+- `ck_conversations_user_id_not_empty`: Check constraint ensuring user_id is not empty
+
+**Foreign Keys**:
+- `fk_conversations_user_id`: References users(id) with CASCADE on DELETE to remove conversations when user is deleted
+
+### Messages Table
+This table stores individual chat messages for the AI chatbot functionality:
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | SERIAL | PRIMARY KEY, NOT NULL | Auto-incrementing message identifier |
+| user_id | VARCHAR(255) | NOT NULL, FOREIGN KEY | Reference to users table |
+| conversation_id | INTEGER | NOT NULL, FOREIGN KEY | Reference to conversations table |
+| role | VARCHAR(20) | NOT NULL, CHECK | Role: 'user' or 'assistant' |
+| content | TEXT | NOT NULL | Message content |
+| created_at | TIMESTAMP | NOT NULL, DEFAULT NOW() | Message creation timestamp |
+
+**Indexes**:
+- `idx_messages_user_id`: Index on user_id for fast user-based queries
+- `idx_messages_conversation_id`: Index on conversation_id for conversation-based queries
+- `idx_messages_created_at`: Index on created_at for chronological ordering
+- `idx_messages_role`: Index on role for filtering by message type
+
+**Constraints**:
+- `pk_messages_id`: Primary key constraint on id
+- `fk_messages_user_id`: Foreign key constraint linking to users table
+- `fk_messages_conversation_id`: Foreign key constraint linking to conversations table
+- `ck_messages_role`: Check constraint ensuring role is 'user' or 'assistant'
+- `ck_messages_content_not_empty`: Check constraint ensuring content is not empty or just whitespace
+
+**Foreign Keys**:
+- `fk_messages_user_id`: References users(id) with CASCADE on DELETE
+- `fk_messages_conversation_id`: References conversations(id) with CASCADE on DELETE
+
 ## Security Considerations
 
 ### Data Isolation
-- Row-level security ensures users can only access their own tasks
+- Row-level security ensures users can only access their own tasks, conversations, and messages
 - All queries must filter by user_id to enforce data isolation
 - Database views or security policies can be implemented to enforce this at the database level
 
@@ -116,28 +180,38 @@ This table stores all user tasks with proper relationships to users:
 
 ### Initial Setup
 ```sql
--- Create tasks table
-CREATE TABLE tasks (
+-- Create conversations table
+CREATE TABLE conversations (
     id SERIAL PRIMARY KEY,
     user_id VARCHAR(255) NOT NULL,
-    title VARCHAR(255) NOT NULL,
-    description TEXT,
-    completed BOOLEAN DEFAULT FALSE,
-    priority VARCHAR(20) DEFAULT 'medium',
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT ck_tasks_priority CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
-    CONSTRAINT ck_tasks_title_not_empty CHECK (LENGTH(TRIM(title)) > 0),
-    CONSTRAINT ck_tasks_description_length CHECK (LENGTH(description) <= 1000)
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Create indexes
-CREATE INDEX idx_tasks_user_id ON tasks(user_id);
-CREATE INDEX idx_tasks_priority ON tasks(priority);
-CREATE INDEX idx_tasks_completed ON tasks(completed);
-CREATE INDEX idx_tasks_created_at ON tasks(created_at);
-CREATE INDEX idx_tasks_title_text ON tasks USING gin(to_tsvector('english', title || ' ' || COALESCE(description, '')));
+-- Create messages table
+CREATE TABLE messages (
+    id SERIAL PRIMARY KEY,
+    user_id VARCHAR(255) NOT NULL,
+    conversation_id INTEGER NOT NULL,
+    role VARCHAR(20) NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+    CONSTRAINT ck_messages_role CHECK (role IN ('user', 'assistant')),
+    CONSTRAINT ck_messages_content_not_empty CHECK (LENGTH(TRIM(content)) > 0)
+);
+
+-- Create indexes for conversations
+CREATE INDEX idx_conversations_user_id ON conversations(user_id);
+CREATE INDEX idx_conversations_created_at ON conversations(created_at);
+
+-- Create indexes for messages
+CREATE INDEX idx_messages_user_id ON messages(user_id);
+CREATE INDEX idx_messages_conversation_id ON messages(conversation_id);
+CREATE INDEX idx_messages_created_at ON messages(created_at);
+CREATE INDEX idx_messages_role ON messages(role);
 ```
 
 ### Future Migrations
@@ -178,27 +252,28 @@ CREATE INDEX idx_tasks_title_text ON tasks USING gin(to_tsvector('english', titl
 
 ### Common Operations
 ```sql
--- Get all tasks for a specific user
-SELECT * FROM tasks WHERE user_id = $1 ORDER BY created_at DESC;
+-- Get all conversations for a specific user
+SELECT * FROM conversations WHERE user_id = $1 ORDER BY created_at DESC;
 
--- Get tasks filtered by priority
-SELECT * FROM tasks WHERE user_id = $1 AND priority = $2;
+-- Get messages for a specific conversation
+SELECT * FROM messages WHERE conversation_id = $1 ORDER BY created_at ASC;
 
--- Get completed tasks
-SELECT * FROM tasks WHERE user_id = $1 AND completed = true;
-
--- Search tasks by title/description
-SELECT * FROM tasks
-WHERE user_id = $1
-AND to_tsvector('english', title || ' ' || COALESCE(description, ''))
-@@ plainto_tsquery('english', $2);
+-- Get messages for a user with conversation context
+SELECT m.*, c.created_at as conversation_start
+FROM messages m
+JOIN conversations c ON m.conversation_id = c.id
+WHERE m.user_id = $1 AND c.id = $2
+ORDER BY m.created_at ASC;
 ```
 
 ### Security Queries
 ```sql
--- Ensure user can only access their own tasks
-SELECT * FROM tasks
-WHERE user_id = $1 AND id = $2;  -- $1 is extracted from JWT, $2 is requested task ID
+-- Ensure user can only access their own conversations and messages
+SELECT * FROM conversations
+WHERE user_id = $1 AND id = $2;  -- $1 is extracted from JWT, $2 is requested conversation ID
+
+SELECT * FROM messages
+WHERE user_id = $1 AND conversation_id = $2;  -- Verify user access to specific conversation
 ```
 
 ## Schema Evolution
