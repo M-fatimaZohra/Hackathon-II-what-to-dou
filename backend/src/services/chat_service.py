@@ -1,14 +1,26 @@
 import os
 import sys
-from typing import List, Dict, Any
-from agents import Agent, Runner
+from typing import List, Dict, Any, AsyncGenerator
+from dotenv import load_dotenv
+from agents import Agent, Runner, ModelSettings, set_default_openai_api
 from agents.mcp import MCPServerStdio
 from agents.result import RunResult
+from openai.types.responses import ResponseTextDeltaEvent
 from sqlmodel import Session as SQLSession
-from src.configs.gemini_config import GEMINI_MODEL
 from src.schema.chat_models import ChatResponse, ToolCallInfo
 from src.services.conversation_service import ConversationService
 from src.database.db import get_session
+
+# Load environment variables
+load_dotenv(override=True)
+
+# Configure OpenAI API
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+if OPENAI_API_KEY:
+    set_default_openai_api(OPENAI_API_KEY)
+
+# OpenAI Model Configuration - hardcoded to gpt-4.1-nano
+OPENAI_MODEL = "gpt-4.1-nano"
 
 
 # System prompt for the TodoAssistant agent
@@ -49,6 +61,90 @@ SECURITY RULES:
 If the user provides an explicit numeric task ID (e.g., "update task 123"), you can use it directly without lookup."""
 
 from contextlib import contextmanager
+
+
+async def run_agent_workflow_streamed(user_id: str, message: str, conversation_id: int) -> AsyncGenerator[Any, None]:
+    """
+    Stream agent workflow responses using Native Responses API Protocol for ChatKit compatibility.
+
+    Yields raw event.data from the OpenAI Agents SDK in standard Responses API format.
+    The frontend useChatKit hook expects standard OpenAI event structures.
+
+    Args:
+        user_id: The ID of the authenticated user
+        message: The user's input message
+        conversation_id: The ID of the conversation to fetch history for
+
+    Yields:
+        Raw event.data from OpenAI Agents SDK (Responses API format)
+    """
+    from sqlmodel import Session
+    from src.database.db import engine
+
+    # Fetch conversation history from the database
+    with Session(engine) as session:
+        messages = ConversationService.get_history(session, conversation_id, user_id)
+        history = [{"role": m.role, "content": m.content} for m in messages]
+        history.append({"role": "user", "content": message})
+        conversation_text = "\n".join(f"{m['role']}: {m['content']}" for m in history)
+
+    # Initialize MCP server
+    mcp_server = MCPServerStdio(
+        params={
+            "command": sys.executable,
+            "args": ["src/my_mcp_server/server.py"],
+            "env": {**os.environ, "PYTHONPATH": ".", "AUTH_USER_ID": user_id}
+        }
+    )
+
+    full_response = ""
+
+    try:
+        async with mcp_server as connection:
+            # Create agent with OpenAI model
+            agent = Agent(
+                name="TodoAssistant",
+                model=OPENAI_MODEL,  # gpt-4.1-nano
+                instructions=SYSTEM_PROMPT,
+                mcp_servers=[connection]
+            )
+
+            # Use Runner.run_streamed() for token-by-token streaming
+            result = Runner.run_streamed(agent, input=conversation_text)
+
+            # Stream events as they arrive - yield raw event.data for ChatKit compatibility
+            async for event in result.stream_events():
+                # Handle text delta events - yield raw event.data (Responses API format)
+                if event.type == "raw_response_event" and isinstance(event.data, ResponseTextDeltaEvent):
+                    # Accumulate for database persistence
+                    delta = event.data.delta
+                    full_response += delta
+
+                    # Yield raw event.data (standard OpenAI Responses API format)
+                    # ChatKit SDK expects: response.output_text.delta
+                    yield event.data
+
+                # Handle tool execution events - yield raw event data
+                elif event.type == "tool_start":
+                    yield event
+
+                elif event.type == "tool_end":
+                    yield event
+
+        # Save messages to database after streaming completes
+        with Session(engine) as session:
+            ConversationService.add_message(session, conversation_id, user_id, "user", message)
+            ConversationService.add_message(session, conversation_id, user_id, "assistant", full_response)
+
+    except Exception as e:
+        # Yield error event
+        class ErrorEvent:
+            def __init__(self, message):
+                self.type = "error"
+                self.message = message
+
+        yield ErrorEvent(str(e))
+
 
 async def run_agent_workflow(user_id: str, message: str, conversation_id: int) -> RunResult:
     """
@@ -91,31 +187,37 @@ async def run_agent_workflow(user_id: str, message: str, conversation_id: int) -
 
     # Use the context manager to handle server lifecycle
     async with mcp_server as connection:
-        # Instantiate the Agent inside the context manager, passing the MCP server connection
+        # Instantiate the Agent with OpenAI model
         agent = Agent(
             name="TodoAssistant",
-            model=GEMINI_MODEL,
+            model=OPENAI_MODEL,  # Use OpenAI model (gpt-4o-mini or configured model)
             instructions=SYSTEM_PROMPT,
             mcp_servers=[connection]  # Use MCP server instead of direct function injection
         )
 
-        # Run the agent with the flattened conversation text instead of history list
-        # This stabilizes execution by avoiding unpredictable tool selection from list of dicts
-        result = await Runner.run(
-            agent,
-            input=conversation_text,  # Pass flattened conversation text as input
-            context={"auth_user_id": user_id}  # Vital for tool security
-        )
+        # Use Runner.run_streamed() for ChatKit compatibility
+        result = Runner.run_streamed(agent, input=conversation_text)
+
+        # Collect the final output from streaming
+        full_response = ""
+        async for event in result.stream_events():
+            if event.type == "raw_response_event" and isinstance(event.data, ResponseTextDeltaEvent):
+                full_response += event.data.delta
 
     # Save the user message to the database after connecting to the agent
     with Session(engine) as session:
         ConversationService.add_message(session, conversation_id, user_id, "user", message)
 
-    # Save the assistant's response to the database
+    # Save the assistant's response to the database (collected from streaming)
     with Session(engine) as session:
-        ConversationService.add_message(session, conversation_id, user_id, "assistant", result.final_output)
+        ConversationService.add_message(session, conversation_id, user_id, "assistant", full_response)
 
-    return result
+    # Return a mock RunResult for compatibility
+    class StreamResult:
+        def __init__(self, output):
+            self.final_output = output
+
+    return StreamResult(full_response)
 
 
 async def get_chat_response(user_id: str, conversation_id: int, message: str):

@@ -30,31 +30,41 @@ The project is developed in multiple phases:
 
 ### Phase I: Console Application
 - In-memory todo CLI application
-- Basic task management functionality
-- Core CRUD operations
+- Basic task management (CRUD operations)
 
 ### Phase II: Full-Stack Web Application
-- Next.js frontend with TypeScript and Tailwind CSS
-- FastAPI backend with Python and SQLModel
-- Neon Serverless PostgreSQL for persistent storage
+- Next.js 16 frontend with TypeScript and Tailwind CSS
+- FastAPI backend with Python 3.12 and SQLModel
+- Neon Serverless PostgreSQL
 - Better Auth for authentication
-- JWT-based security implementation
+- JWT-based security
 
-### Phase III: Backend Agentic Foundation
-- AI-powered chatbot for natural language task management
-- MCP SDK and OpenAI Agents SDK integration
-- Conversation and message storage for chat history
-- Production/development mode toggle capability
+### Phase III: ChatKit Frontend Integration (Advanced Integration)
+- **UI**: Persistent sidebar overlay on `/tasks` page (no separate /chat page)
+- **SDK-First**: Single `<ChatAssistant />` wrapper using `@openai/chatkit-react` SDK's `<ChatView />` component
+- **Streaming**: Server-Sent Events (SSE) for real-time message streaming from FastAPI backend
+- **Backend**: `ChatKitServer` class from `openai-chatkit` Python SDK handles SSE protocol
+- **Performance**: Time to First Token (TTFT) < 500ms for 90% of interactions
+- **Authentication**: JWT verification via `auth_handler` middleware, baseUrl scoped to `/api/{user_id}/chat`
+- **Stateless Frontend**: JWT + userId per request, no local conversation persistence
+- **Stateful Backend**: Fetches conversation history from Neon DB on session initialization
+- **User Isolation**: All requests scoped to `/api/{user_id}/` endpoints with JWT verification
+- **Environment Toggle**: `NEXT_PUBLIC_MOD` variable controls dev/prod behavior (API URLs, security settings)
+- **Integration Flow**: ChatKit UI → FastAPI (auth_handler) → Agent SDK → MCP Tools → Neon DB
+- **Multi-turn Conversations**: Backend manages conversation context via database queries
+- **MCP SDK and OpenAI Agents SDK integration**: For natural language task processing
+- **Conversation and message storage**: Persistent chat history in Neon PostgreSQL
 
 ## Technology Stack
 ### Frontend
-- Next.js (App Router)
+- Next.js 16 (App Router)
 - TypeScript
-- Tailwind CSS
+- Tailwind CSS v4
 - Better Auth (client integration)
+- ChatKit React SDK (real-time messaging)
 
 ### Backend
-- Python
+- Python 3.12
 - FastAPI
 - SQLModel (ORM)
 - JWT authentication

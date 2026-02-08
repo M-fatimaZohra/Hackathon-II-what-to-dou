@@ -364,90 +364,170 @@ Authorization: Bearer <jwt_token>
 | `RATE_LIMIT_EXCEEDED` | Rate limit has been exceeded |
 | `INTERNAL_ERROR` | An unexpected server error occurred |
 
-## Chat Endpoints (Phase III: Agentic Foundation)
+## Chat Endpoints (Phase III: ChatKit Integration)
 
-### POST /{user_id}/chat
-Process natural language input and perform task management operations through AI agent.
+### POST /api/{user_id}/chat
+Send a chat message to the AI assistant with Server-Sent Events (SSE) streaming response.
 
-#### Headers
-```
-Authorization: Bearer <jwt_token>
-```
+**Headers**: `Authorization: Bearer <jwt_token>`, `Content-Type: application/json`, `Accept: text/event-stream`
 
-#### Path Parameters
-- `user_id`: The ID of the authenticated user (must match JWT)
+**Path Parameters**: `user_id` - Must match JWT token (verified via auth_handler middleware)
 
-#### Request
+**Request**:
 ```json
 {
-  "conversation_id": 123,  // Optional: integer or null for new conversation
-  "message": "Add a task to buy groceries tomorrow"  // Required: string, the user's message
+  "conversationId": "conv_456",
+  "message": "Create a task to buy groceries"
 }
 ```
 
-#### Response (200 OK)
+**Response (200 - SSE Stream)**:
+```
+Content-Type: text/event-stream
+Cache-Control: no-cache
+Connection: keep-alive
+
+event: message
+data: {"type": "token", "content": "I've", "timestamp": "2026-02-08T10:30:00.100Z"}
+
+event: message
+data: {"type": "token", "content": " created", "timestamp": "2026-02-08T10:30:00.200Z"}
+
+event: message
+data: {"type": "token", "content": " a", "timestamp": "2026-02-08T10:30:00.300Z"}
+
+event: message
+data: {"type": "token", "content": " task", "timestamp": "2026-02-08T10:30:00.400Z"}
+
+event: mcp_tool
+data: {"toolName": "create_task", "response": "Task created successfully: Buy groceries", "timestamp": "2026-02-08T10:30:01.000Z"}
+
+event: complete
+data: {"messageId": "msg_123456", "status": "success", "timestamp": "2026-02-08T10:30:01.100Z"}
+```
+
+**SSE Event Types**:
+- `message`: Streamed text tokens from AI assistant (TTFT < 500ms target)
+- `mcp_tool`: MCP tool execution results
+- `complete`: Final message completion with metadata
+- `error`: Error occurred during processing
+
+**Backend Implementation**:
+- Uses `ChatKitServer` class from `openai-chatkit` Python SDK
+- Handles SSE streaming protocol automatically
+- Integrates with OpenAI Agents SDK for AI processing
+- Routes to MCP tools for task operations
+- Fetches conversation history from Neon DB on session init
+
+**Validation**:
+- `message`: Required, 1-10,000 characters
+- `conversationId`: Required
+- `user_id`: Must match JWT token (enforced by auth_handler)
+- JWT verification via `auth_handler.py` middleware before processing
+
+**Performance**:
+- Time to First Token (TTFT): < 500ms for 90% of requests
+- SSE connection maintained for duration of response
+- Automatic reconnection on connection loss
+
+**Error Responses**: `400 Bad Request`, `401 Unauthorized`, `403 Forbidden` (user_id mismatch), `429 Too Many Requests`, `500 Internal Server Error`, `503 Service Unavailable`
+
+---
+
+### GET /api/{user_id}/chat/{conversation_id}
+Retrieve message history.
+
+**Headers**: `Authorization: Bearer <jwt_token>`
+
+**Path Parameters**: `user_id`, `conversation_id`
+
+**Query Parameters**: `limit` (default: 50, max: 100), `offset` (default: 0)
+
+**Response (200)**:
 ```json
 {
-  "conversation_id": 123,  // The ID of the conversation (newly created if null was provided)
-  "response": "I've created a task 'buy groceries' for tomorrow.",  // The AI's response to the user
-  "tool_calls": [  // Array of tools called by the AI agent
+  "messages": [
     {
-      "function": "create_task",
-      "arguments": {
-        "title": "buy groceries",
-        "due_date": "tomorrow"
-      }
+      "id": "msg_123",
+      "userId": "user123",
+      "conversationId": "conv_456",
+      "content": "Create a task to buy groceries",
+      "role": "user",
+      "timestamp": "2026-02-08T10:30:00Z",
+      "status": "delivered"
     }
-  ]
+  ],
+  "total": 42,
+  "hasMore": true
 }
 ```
 
-#### Validation
-- `message` is required and must be 1-1000 characters
-- `conversation_id` must be a valid conversation ID owned by the user, or null for new conversation
-- `user_id` in path must match the user ID in the JWT token
+**Error Responses**: `401 Unauthorized`, `403 Forbidden`, `404 Not Found`
 
-#### Error Responses
-- `400 Bad Request`: Invalid input data
-  ```json
-  {
-    "success": false,
-    "error": {
-      "code": "INVALID_INPUT",
-      "message": "Message is required and cannot exceed 1000 characters"
-    }
-  }
-  ```
-- `401 Unauthorized`: Invalid or expired JWT token
-  ```json
-  {
-    "success": false,
-    "error": {
-      "code": "UNAUTHORIZED",
-      "message": "Invalid or expired JWT token"
-    }
-  }
-  ```
-- `403 Forbidden`: User ID mismatch between path and JWT
-  ```json
-  {
-    "success": false,
-    "error": {
-      "code": "FORBIDDEN",
-      "message": "Access denied: User ID mismatch"
-    }
-  }
-  ```
-- `500 Internal Server Error`: Unexpected server error during processing
-  ```json
-  {
-    "success": false,
-    "error": {
-      "code": "INTERNAL_ERROR",
-      "message": "Internal server error occurred while processing the chat request"
-    }
-  }
-  ```
+---
+
+### POST /api/{user_id}/conversations
+Create a new conversation.
+
+**Headers**: `Authorization: Bearer <jwt_token>`, `Content-Type: application/json`
+
+**Request**:
+```json
+{
+  "title": "Task Management Chat"
+}
+```
+
+**Response (201)**:
+```json
+{
+  "id": "conv_789",
+  "userId": "user123",
+  "title": "Task Management Chat",
+  "createdAt": "2026-02-08T10:30:00Z",
+  "messageCount": 0,
+  "status": "active"
+}
+```
+
+**Error Responses**: `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`
+
+---
+
+### GET /api/{user_id}/conversations
+List all conversations.
+
+**Headers**: `Authorization: Bearer <jwt_token>`
+
+**Query Parameters**: `limit` (default: 20, max: 50), `offset` (default: 0), `status` (optional)
+
+**Response (200)**:
+```json
+{
+  "conversations": [...],
+  "total": 10,
+  "hasMore": false
+}
+```
+
+**Error Responses**: `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`
+
+---
+
+### POST /api/chatkit/token
+Get ChatKit authentication token.
+
+**Headers**: `Authorization: Bearer <jwt_token>`
+
+**Response (200)**:
+```json
+{
+  "token": "[CENSOR]",
+  "expiresAt": "2026-02-08T11:30:00Z"
+}
+```
+
+**Error Responses**: `401 Unauthorized`, `500 Internal Server Error`
 
 ## Rate Limiting
 - Authentication endpoints: 5 requests per 15 minutes per IP

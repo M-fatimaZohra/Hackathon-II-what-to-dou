@@ -58,74 +58,67 @@ This document specifies the reusable UI components for the AI Native Todo Applic
 - Loading state during submission
 - Ability to add new tasks
 
-### 2. AI Chatbot Components (Phase III: Agentic Foundation)
+### 2. AI Chatbot Components (Phase III: ChatKit Integration)
 
-#### ChatInterface
-**Purpose**: Main chat interface for interacting with the AI agent
-**Location**: `src/components/chat/chat-interface.tsx`
+#### ChatProvider
+**Purpose**: Component using useChatKit hook for ChatKit SDK integration with JWT authentication
+**Location**: `src/components/ChatProvider.tsx`
 **Props**:
-- `userId`: String, required - The ID of the authenticated user
-- `onTaskCreated`: Callback when AI creates a task
-- `onTaskUpdated`: Callback when AI updates a task
-- `onTaskDeleted`: Callback when AI deletes a task
-- `onConversationStart`: Callback when new conversation starts
-- `onConversationEnd`: Callback when conversation ends
+- `children`: React.ReactNode
 
-**State**:
-- `messages`: Array of chat messages (user and AI)
-- `inputValue`: Current user input text
-- `isLoading`: Whether AI is processing the request
-- `conversationId`: Current conversation ID (null for new conversation)
-- `error`: Error message if chat fails
+**Features**:
+- Uses useChatKit hook from @openai/chatkit-react
+- Configures custom fetch function for JWT authentication
+- Configures baseUrl scoped to `/api/{user_id}/chat` with JWT verification
+- Handles SSE connection management via SDK
+- Implements error handling for authentication failures
+- Enforces stateless operation and user isolation
 
-#### ChatMessage
-**Purpose**: Displays a single chat message from user or AI
-**Location**: `src/components/chat/chat-message.tsx`
+#### ChatAssistant
+**Purpose**: Wrapper component that integrates ChatKit SDK's `<ChatKit />` component for sidebar overlay
+**Location**: `src/components/chat/ChatAssistant.tsx`
 **Props**:
-- `message`: Message object with content, role (user/assistant), and timestamp
-- `isOwnMessage`: Whether this is the current user's message
-- `showAvatar`: Whether to show avatar (default: true)
+- `conversationId`: string | null - Current conversation ID
+- `onClose`: () => void - Callback to close sidebar
+- `isOpen`: boolean - Sidebar visibility state
 
-**State**:
-- `isExpanded`: Whether long messages are expanded
+**Features**:
+- Uses `@openai/chatkit-react` SDK's `<ChatKit />` component with control prop
+- Displays as persistent sidebar overlay on tasks page
+- Handles message input and display via SDK
+- Supports SSE streaming for real-time responses
+- Receives control object from useChatKit hook
+- No manual ChatWindow, ChatInput, or ChatMessage components needed
 
-#### ChatInput
-**Purpose**: Input field for sending messages to the AI agent
-**Location**: `src/components/chat/chat-input.tsx`
-**Props**:
-- `value`: Current input value
-- `onChange`: Handler for input changes
-- `onSend`: Handler for sending message
-- `disabled`: Whether input is disabled (default: false)
-- `placeholder`: Input placeholder text (default: "Type your task request...")
+**SDK Integration**:
+```typescript
+import { ChatKit, useChatKit } from '@openai/chatkit-react';
 
-**State**:
-- `isFocused`: Whether input is focused
+export function ChatAssistant({ conversationId, onClose, isOpen }) {
+  const { control } = useChatKit({
+    api: {
+      url: `${CONFIG.API_BASE_URL}/api/${userId}/chat`,
+      domainKey: process.env.NEXT_PUBLIC_OPENAI_DOMAIN_KEY,
+      fetch: (url, options) => {
+        return fetch(url, {
+          ...options,
+          headers: {
+            ...options.headers,
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+      },
+    },
+  });
 
-#### ConversationHistory
-**Purpose**: Displays conversation history and allows switching between conversations
-**Location**: `src/components/chat/conversation-history.tsx`
-**Props**:
-- `conversations`: Array of conversation objects
-- `onConversationSelect`: Callback when conversation is selected
-- `onConversationDelete`: Callback when conversation is deleted
-- `loading`: Whether conversations are loading
-
-**State**:
-- `selectedConversationId`: Currently selected conversation ID
-- `showDeleteConfirm`: Whether to show delete confirmation
-
-#### TaskSuggestion
-**Purpose**: Displays suggested tasks based on AI interpretation of user input
-**Location**: `src/components/chat/task-suggestion.tsx`
-**Props**:
-- `suggestions`: Array of suggested tasks
-- `onAccept`: Callback when suggestion is accepted
-- `onReject`: Callback when suggestion is rejected
-- `showActions`: Whether to show accept/reject buttons (default: true)
-
-**State**:
-- `accepted`: Whether the suggestion has been accepted
+  return (
+    <div className="sidebar-overlay">
+      <ChatKit control={control} className="h-full" />
+      <button onClick={onClose}>Close</button>
+    </div>
+  );
+}
+```
 
 
 

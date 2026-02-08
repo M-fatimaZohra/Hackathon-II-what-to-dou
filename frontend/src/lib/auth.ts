@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
 import { Pool } from "pg";
+import { CONFIG } from "@/lib/config";
 
 // Create a more optimized database pool configuration
 const dbPool = new Pool({
@@ -27,26 +28,26 @@ export const auth = betterAuth({
       strategy: "jwt", // This ensures HS256 JWT tokens are generated
       maxAge: 60 * 60 * 24 * 7, // 7 days
       httpOnly: false, // Changed to false to allow JWT extraction by ApiClient for cross-domain requests
-      refreshCache: true,
+      refreshCache: CONFIG.REFRESH_CACHE, // Use CONFIG for cache refresh setting
     },
   },
-  baseURL: process.env.NEXT_PUBLIC_BASE_URL!, // Use environment variable for base URL
-  trustedOrigins: [process.env.NEXT_PUBLIC_BASE_URL!], // Use environment variable for trusted origins
+  baseURL: CONFIG.AUTH_BASE_URL, // Use CONFIG for base URL (respects IS_DEV)
+  trustedOrigins: [CONFIG.AUTH_BASE_URL], // Use CONFIG for trusted origins (respects IS_DEV)
   plugins: [],
   advanced: {
     cookies: {
       session_token: {
         attributes: {
-          httpOnly: true,
-          secure: true,
+          httpOnly: CONFIG.HTTP_ONLY_TOKEN, // Use CONFIG for httpOnly (false in dev for debugging, true in prod)
+          secure: CONFIG.COOKIE_SECURE, // Use CONFIG for secure flag (false in dev, true in prod)
           sameSite: "lax",
           path: "/",
         },
       },
       session_data: {
         attributes: {
-          httpOnly: false, // Changed to false to allow JWT extraction by ApiClient for cross-domain requests
-          secure: true,
+          httpOnly: false, // Always false to allow JWT extraction by ApiClient for cross-domain requests
+          secure: CONFIG.COOKIE_SECURE, // Use CONFIG for secure flag (false in dev, true in prod)
           sameSite: "lax",
           path: "/",
         },

@@ -35,6 +35,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <script src="https://cdn.platform.openai.com/deployments/chatkit/chatkit.js"></script>
       <body
         className={`${inter.className} antialiased bg-[#FFFBED]`}
         style={inter.style}

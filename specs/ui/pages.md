@@ -88,14 +88,16 @@ This document specifies the pages for the AI Native Todo Application. Each page 
 
 #### Task List Page
 **Path**: `/tasks`
-**Purpose**: Display all user tasks with filtering and search capabilities
+**Purpose**: Display all user tasks with filtering, search capabilities, and AI chat sidebar overlay
 **Components Used**:
 - `Layout` (header, navigation)
 - `ProtectedRoute`
 - `TaskList`
+- `ChatProvider` (component using useChatKit hook)
+- `ChatAssistant` (sidebar overlay with ChatKit SDK)
 - `Input` (for search)
 - `Select` (for priority filter)
-- `Button` (for new task)
+- `Button` (for new task and chat toggle)
 
 **Features**:
 - Search functionality
@@ -104,6 +106,15 @@ This document specifies the pages for the AI Native Todo Application. Each page 
 - Sort options
 - Pagination (if needed)
 - Add new task button
+- **AI Chat Sidebar Overlay** (Phase III):
+  - Persistent sidebar overlay using ChatKit SDK
+  - Toggle button to open/close chat
+  - Real-time chat with AI agent via SSE streaming
+  - JWT authentication via Better Auth
+  - Stateless operation (JWT + userId per request)
+  - User isolation (all requests scoped to `/api/{user_id}/`)
+  - Natural language task management
+  - Multi-turn conversation support
 - Empty state when no tasks exist
 - Loading state during data fetch
 
@@ -111,55 +122,46 @@ This document specifies the pages for the AI Native Todo Application. Each page 
 - Authenticated user
 - User's tasks with filtering options
 - Filter and sort parameters
+- JWT token from `authClient.getSession()` for chat
+- ChatKit configuration with baseUrl scoped to `/api/{user_id}/chat`
 
 **User Flow**:
 1. User navigates to tasks page
-2. Page checks authentication
-3. Fetches user's tasks with applied filters
-4. Displays tasks in list format
-5. Allows user to interact with tasks (edit, delete, toggle)
+2. Page checks authentication via Better Auth
+3. If not authenticated: redirect to `/signin`
+4. Fetches user's tasks with applied filters
+5. Displays tasks in list format
+6. **Chat Sidebar Flow** (Phase III):
+   - User clicks chat toggle button
+   - Sidebar overlay slides in from right
+   - ChatProvider initializes with JWT token via custom fetch function
+   - ChatAssistant component renders using `<ChatKit />` from `@openai/chatkit-react` with control prop
+   - Backend fetches conversation history from Neon DB
+   - User types message (e.g., "Create a task to buy groceries")
+   - Message sent to `/api/{user_id}/chat` with JWT + userId
+   - Backend processes via ChatKitServer → Agent SDK → MCP tools
+   - Response streamed via SSE in real-time (TTFT < 500ms)
+   - MCP tool response displayed (e.g., "Task created successfully: Buy groceries")
+   - Task list automatically updates to show new task
+   - User can close sidebar or continue conversation
+7. Allows user to interact with tasks (edit, delete, toggle)
+
+**Error Handling**:
+- Network errors: Retry with exponential backoff
+- Authentication errors: Prompt re-authentication
+- Token expiration: Refresh or redirect to signin
+- Backend unavailable: Show error with retry option
+- Validation errors: Show inline error messages
+- SSE connection errors: Automatic reconnection with status indicator
+
+**Performance Targets**:
+- Page load: < 2 seconds
+- Time to First Token (TTFT): < 500ms for 90% of chat interactions
+- SSE streaming: 95% of messages
+- Sidebar overlay animation: < 300ms
 
 
 
-
-### AI Chatbot Pages (Phase III: Agentic Foundation)
-
-#### Chat Page
-**Path**: `/chat`
-**Purpose**: Provide an AI-powered interface for natural language task management
-**Components Used**:
-- `Layout` (header, navigation)
-- `ProtectedRoute`
-- `ChatInterface`
-- `ConversationHistory`
-- `LoadingSpinner` (if loading)
-
-**Features**:
-- Real-time chat interface with AI agent
-- Natural language processing for task creation/modification
-- Conversation history management
-- Task suggestions based on AI interpretation
-- Context-aware responses from AI
-- Loading states during AI processing
-- Error handling for API failures
-
-**Data Requirements**:
-- Authenticated user
-- User's conversation history
-- Current conversation context
-- AI agent connectivity
-
-**User Flow**:
-1. User navigates to chat page
-2. Page checks authentication
-3. Fetches user's conversation history
-4. Initializes chat interface with latest conversation or starts new
-5. User types natural language request (e.g., "Add a task to buy groceries")
-6. Request is sent to AI agent via chat API
-7. AI processes request and calls appropriate MCP tools
-8. Task operations are performed based on AI interpretation
-9. AI response is displayed with any task changes
-10. Conversation is saved to history
 
 ### Profile and Settings Pages
 
@@ -227,8 +229,7 @@ This document specifies the pages for the AI Native Todo Application. Each page 
 - `/` - Landing page (redirects to tasks if authenticated)
 
 ### Protected Routes
-- `/tasks` - Task list for authenticated users
-- `/chat` - AI-powered chat interface for task management
+- `/tasks` - Task list with AI chat sidebar overlay for authenticated users
 - `/profile` - User profile for authenticated users
 - `/settings` - User settings for authenticated users
 
