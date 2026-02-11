@@ -11,8 +11,8 @@ The AI Native Todo Application follows a modern full-stack architecture with cle
 │  ┌──────────────┐    ┌─────────────────────────────────┐  │
 │  │ Tasks Page   │    │   ChatAssistant (Sidebar)       │  │
 │  │              │◄───┤   - Uses @openai/chatkit-react  │  │
-│  │ - TaskList   │    │   - <ChatView /> SDK component  │  │
-│  │ - TaskForm   │    │   - JWT auth via Better Auth    │  │
+│  │ - TaskList   │    │   - <ChatKit /> SDK component   │  │
+│  │ - TaskForm   │    │   - CustomApiConfig with JWT    │  │
 │  └──────────────┘    └─────────────────────────────────┘  │
 │         │                          │                        │
 │         │                          │ SSE Stream             │
@@ -24,9 +24,9 @@ The AI Native Todo Application follows a modern full-stack architecture with cle
 │              Backend (FastAPI + Python 3.12)                │
 │                                                             │
 │  ┌──────────────┐    ┌─────────────────────────────────┐  │
-│  │ auth_handler │    │   ChatKitServer                 │  │
-│  │ (JWT verify) │───►│   - SSE streaming               │  │
-│  └──────────────┘    │   - Session init                │  │
+│  │ auth_handler │    │   Chat Service                  │  │
+│  │ (JWT verify) │───►│   - SSE streaming (custom fmt)  │  │
+│  └──────────────┘    │   - Runner.run_streamed()       │  │
 │                      │   - History fetch from DB       │  │
 │                      └──────────┬──────────────────────┘  │
 │                                 │                          │
@@ -53,11 +53,12 @@ The AI Native Todo Application follows a modern full-stack architecture with cle
 ```
 
 **Key Architecture Changes (Phase III)**:
-- **Frontend**: Sidebar overlay on `/tasks` page using ChatKit SDK's `<ChatView />`
-- **Backend**: `ChatKitServer` class handles SSE streaming protocol
+- **Frontend**: Sidebar overlay on `/tasks` page using ChatKit SDK's `<ChatKit />` with CustomApiConfig
+- **Backend**: Custom SSE streaming format (not ChatKitServer) via `Runner.run_streamed()`
 - **Communication**: Server-Sent Events (SSE) for real-time streaming (not WebSocket)
-- **State Management**: Backend fetches conversation history from DB on session init
+- **State Management**: Backend fetches conversation history from DB on request
 - **Authentication**: JWT verification via `auth_handler` middleware before processing
+- **Integration**: ChatKit SDK's CustomApiConfig acts as pass-through for custom backend format
 
 ## Component Breakdown
 
@@ -100,21 +101,24 @@ The AI Native Todo Application follows a modern full-stack architecture with cle
 
 ### AI Chatbot Flow (Phase III - SSE Streaming)
 1. User opens chat sidebar overlay on `/tasks` page
-2. Frontend sends message to `/api/{user_id}/chat` with JWT token
-3. Backend `auth_handler` middleware validates JWT and extracts user_id
-4. Verifies path `user_id` matches JWT token user_id (403 if mismatch)
-5. `ChatKitServer` initializes session and fetches conversation history from Neon DB
-6. Request routed to OpenAI Agents SDK for processing
-7. Agent SDK determines required MCP tool calls
-8. MCP tools execute task operations (create, read, update, delete)
-9. Response streamed via SSE (Server-Sent Events):
+2. Frontend ChatProvider initializes useChatKit with CustomApiConfig (domainKey, url, custom fetch)
+3. User sends message - custom fetch injects JWT Authorization header
+4. Backend `auth_handler` middleware validates JWT and extracts user_id
+5. Verifies path `user_id` matches JWT token user_id (403 if mismatch)
+6. Chat service fetches conversation history from Neon DB
+7. Request routed to OpenAI Agents SDK for processing via `Runner.run_streamed()`
+8. Agent SDK determines required MCP tool calls
+9. MCP tools execute task operations (create, read, update, delete)
+10. Response streamed via SSE in custom format:
+   - Format: `{"type": "response.output_text.delta", "delta": "..."}`
    - First token sent within 500ms (TTFT target)
    - Subsequent tokens streamed in real-time
    - MCP tool responses included in stream
    - Completion event sent when done
-10. Frontend `<ChatView />` displays streamed response in real-time
-11. New messages persisted to Neon DB
-12. Task list automatically updates if task operations performed
+11. Frontend ChatKit SDK receives custom format via CustomApiConfig pass-through
+12. `<ChatKit />` component displays streamed response in real-time
+13. New messages persisted to Neon DB
+14. Task list automatically updates if task operations performed
 
 ## Security Architecture
 
@@ -155,7 +159,8 @@ The AI Native Todo Application follows a modern full-stack architecture with cle
 - Conversation history management
 
 ### ChatKit Integration
-- Real-time messaging via WebSocket
-- JWT token exchange via backend
-- Stateless frontend operation
-- Connection pooling and reconnection
+- Real-time messaging via SSE (not WebSocket)
+- CustomApiConfig for self-hosted backend integration
+- Custom fetch function for JWT token injection
+- Stateless frontend operation (backend manages conversation state)
+- Pass-through architecture (ChatKit SDK accepts custom backend format)

@@ -42,11 +42,18 @@ export const CONFIG: ConfigType = {
   REFRESH_CACHE: !IS_DEV,
 };
 
-// Validation: Ensure required environment variables are set
-if (!process.env.NEXT_PUBLIC_MOD && !IS_DEV) {
-  console.warn(
-    'NEXT_PUBLIC_MOD not set, defaulting to production mode. Set NEXT_PUBLIC_MOD=developer for development.'
-  );
+// Validation: Ensure required environment variables are set in production
+if (!IS_DEV) {
+  if (!process.env.NEXT_PUBLIC_API_URL) {
+    throw new Error(
+      'NEXT_PUBLIC_API_URL is required in production mode. Set NEXT_PUBLIC_MOD=developer for local development.'
+    );
+  }
+  if (!process.env.NEXT_PUBLIC_BASE_URL) {
+    throw new Error(
+      'NEXT_PUBLIC_BASE_URL is required in production mode. Set NEXT_PUBLIC_MOD=developer for local development.'
+    );
+  }
 }
 
 export default CONFIG;

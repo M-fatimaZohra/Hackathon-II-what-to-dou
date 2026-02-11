@@ -28,6 +28,12 @@ export interface Message {
   metadata?: MessageMetadata;    // Optional metadata
 }
 
+// ChatKit SDK Requirements (FR-018)
+// Backend MUST include these fields in thread.message.created SSE events:
+// - status: "completed" (required for message persistence after streaming)
+// - created_at: timestamp (required for message ordering and persistence)
+// Without these fields, ChatKit SDK discards messages when response.done is received
+
 export type MessageStatus =
   | 'pending'    // Message being sent
   | 'sent'       // Message sent to server
@@ -195,6 +201,16 @@ export interface ChatProviderProps {
   children: React.ReactNode;                 // Child components
 }
 ```
+
+## ChatKit SDK Integration Requirements
+
+**Message Persistence (FR-018)**: Backend MUST include in `thread.message.created` events:
+- `status: "completed"` - Required for message persistence
+- `created_at: timestamp` - Required for message ordering
+
+**Request Routing (FR-017)**: Frontend MUST intercept `threads.list` requests in custom fetch and return mock `{data: [], has_more: false}` to prevent state corruption.
+
+**Reference**: See plan.md "ChatKit SDK Multi-Request Architecture" section for implementation details.
 
 ## API Request/Response Types
 

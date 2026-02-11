@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Inter } from "next/font/google";
 import { Oswald } from "next/font/google";
 import { Satisfy } from "next/font/google";
@@ -35,11 +36,20 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <script src="https://cdn.platform.openai.com/deployments/chatkit/chatkit.js"></script>
+      <head>
+        <link
+          rel="stylesheet"
+          href="https://cdn.platform.openai.com/deployments/chatkit/chatkit.css"
+        />
+      </head>
       <body
         className={`${inter.className} antialiased bg-[#FFFBED]`}
         style={inter.style}
       >
+        <Script
+          src="https://cdn.platform.openai.com/deployments/chatkit/chatkit.js"
+          strategy="beforeInteractive"
+        />
         <Navigation />
         <main className="pt-16">
           {children}

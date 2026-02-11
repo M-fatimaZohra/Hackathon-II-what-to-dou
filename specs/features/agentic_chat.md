@@ -80,8 +80,8 @@ As an authenticated user, I want to maintain conversation history so that I can 
   - Done/Complete/Finished for completing tasks
   - Delete/Remove/Cancel for deleting tasks
   - Change/Update/Rename for updating tasks
-- **FR-005**: System MUST provide a POST API endpoint at `/api/{user_id}/chat` accepting `{conversation_id: int?, message: str}`
-- **FR-006**: System MUST return `{conversation_id: int, response: str, tool_calls: array}` from the chat API
+- **FR-005**: System MUST provide a POST API endpoint at `/api/{user_id}/chat` accepting `{conversation_id: int?, message: str}` and returning SSE stream with custom format
+- **FR-006**: System MUST stream responses using Server-Sent Events (SSE) with custom format: `{"type": "response.output_text.delta", "delta": "..."}` for text and `{"type": "tool_end", "tool_name": "...", "output": "..."}` for MCP tool results
 - **FR-007**: System MUST fetch conversation history from database for each request
 - **FR-008**: System MUST store new messages in the database after processing
 - **FR-009**: System MUST validate user authentication for all chatbot interactions
@@ -89,6 +89,7 @@ As an authenticated user, I want to maintain conversation history so that I can 
 - **FR-011**: System MUST execute appropriate task operations based on AI interpretation of user intent
 - **FR-012**: System MUST maintain conversation context for multi-turn interactions
 - **FR-013**: System MUST handle errors gracefully when AI interpretation fails
+- **FR-014**: Frontend MUST use ChatKit SDK's CustomApiConfig to receive backend's custom SSE format via pass-through
 
 ### Key Entities *(include if feature involves data)*
 - **Conversation**: Represents a chat session with ID, user ID (foreign key), and timestamps

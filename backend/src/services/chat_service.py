@@ -114,15 +114,15 @@ async def run_agent_workflow_streamed(user_id: str, message: str, conversation_i
 
             # Stream events as they arrive - yield raw event.data for ChatKit compatibility
             async for event in result.stream_events():
-                # Handle text delta events - yield raw event.data (Responses API format)
+                # Handle text delta events - yield raw event (Responses API format)
                 if event.type == "raw_response_event" and isinstance(event.data, ResponseTextDeltaEvent):
                     # Accumulate for database persistence
                     delta = event.data.delta
                     full_response += delta
 
-                    # Yield raw event.data (standard OpenAI Responses API format)
-                    # ChatKit SDK expects: response.output_text.delta
-                    yield event.data
+                    # Yield full event object (RawResponsesStreamEvent wrapper)
+                    # This ensures chat.py's isinstance(event_data, RawResponsesStreamEvent) check passes
+                    yield event
 
                 # Handle tool execution events - yield raw event data
                 elif event.type == "tool_start":

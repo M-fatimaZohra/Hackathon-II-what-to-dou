@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The What to Dou app is a modern, full-stack web application designed for efficient task management with personal user accounts. This application allows you to create, manage, and track your tasks through an intuitive web interface with secure authentication, persistent storage, and cross-device synchronization.
+The What to Dou app is a modern, AI-native web application designed for efficient task management with personal user accounts. This application allows you to create, manage, and track your tasks through an intuitive web interface and an AI chatbot — with secure authentication, persistent storage, and cross-device synchronization.
 
 ## Getting Started
 
@@ -56,7 +56,15 @@ The What to Dou app is a modern, full-stack web application designed for efficie
 - **Delete Tasks:** Remove tasks you no longer need
 - **Toggle Completion:** Mark tasks as complete/incomplete with one click
 
-### 3. Advanced Features
+### 3. AI Chatbot (New in v3.0.0)
+- **Open Chat:** Click the AI Assistant button on the tasks page to open the chat sidebar
+- **Converse Naturally:** Type messages like "Create a task called Buy groceries with high priority"
+- **View Tasks by Chat:** Ask "Show me my incomplete tasks" for an instant summary
+- **Update and Complete:** Tell the chatbot "Mark groceries as done" or "Delete the old task"
+- **Switch Views:** Use the Chat/History tabs to toggle between messages and past conversations
+- **Close Chat:** Click X or press Escape to dismiss the sidebar
+
+### 4. Advanced Features
 - **Search Tasks:** Find tasks by keyword in title or description
 - **Filter Tasks:** Sort by priority level (low, medium, high, urgent) or completion status
 - **Priority Levels:** Assign importance levels to tasks
@@ -104,4 +112,4 @@ Common issues and solutions:
 
 ## Next Steps
 
-This full-stack implementation provides a solid foundation for advanced features. Future enhancements will include due dates, task sharing, notifications, and analytics to further improve your task management experience.
+With the AI chatbot now integrated, the what-to-dou app offers two powerful ways to manage your tasks: the traditional web interface and conversational AI. Future enhancements will include voice input, smart suggestions, calendar integration, and team collaboration to further improve your productivity.

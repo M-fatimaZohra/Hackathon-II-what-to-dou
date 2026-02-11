@@ -36,12 +36,12 @@ description: "Advanced Integration implementation for ChatKit Frontend with self
 
 **⚠️ CRITICAL**: This phase establishes the foundation for all environment-specific behavior
 
-- [ ] T001 Install @openai/chatkit-react SDK in frontend/package.json
-- [ ] T002 Apply dev-prod-toggle-config skill to create frontend/src/lib/config.ts with NEXT_PUBLIC_MOD toggle
-- [ ] T003 Implement CONFIG object in frontend/src/lib/config.ts with API_BASE_URL, AUTH_BASE_URL, COOKIE_SECURE, HTTP_ONLY_TOKEN, REFRESH_CACHE
-- [ ] T004 Create frontend/.env.local.example with NEXT_PUBLIC_MOD, NEXT_PUBLIC_API_URL, NEXT_PUBLIC_BASE_URL, NEXT_PUBLIC_OPENAI_DOMAIN_KEY
-- [ ] T005 Update frontend/src/lib/api.ts to use CONFIG.API_BASE_URL instead of hardcoded URLs
-- [ ] T006 Verify Better Auth 1.4.10 configuration in frontend/src/lib/auth-client.ts respects CONFIG settings
+- [X] T001 Install @openai/chatkit-react SDK in frontend/package.json
+- [X] T002 Apply dev-prod-toggle-config skill to create frontend/src/lib/config.ts with NEXT_PUBLIC_MOD toggle
+- [X] T003 Implement CONFIG object in frontend/src/lib/config.ts with API_BASE_URL, AUTH_BASE_URL, COOKIE_SECURE, HTTP_ONLY_TOKEN, REFRESH_CACHE
+- [X] T004 Create frontend/.env.local.example with NEXT_PUBLIC_MOD, NEXT_PUBLIC_API_URL, NEXT_PUBLIC_BASE_URL, NEXT_PUBLIC_OPENAI_DOMAIN_KEY
+- [X] T005 Update frontend/src/lib/api.ts to use CONFIG.API_BASE_URL instead of hardcoded URLs
+- [X] T006 Verify Better Auth 1.4.10 configuration in frontend/src/lib/auth-client.ts respects CONFIG settings
 
 **Checkpoint**: Environment toggle working, CONFIG object accessible throughout frontend
 
@@ -135,6 +135,54 @@ description: "Advanced Integration implementation for ChatKit Frontend with self
 - [X] T049 Verify 403 Forbidden returned if user_id mismatch detected
 
 **Checkpoint**: Backend streams SSE responses using Runner.run_streamed(), OpenAI model configured, JWT validation enforced
+
+---
+
+## Phase 4.5: Fix ChatProvider Configuration (CRITICAL)
+
+**Purpose**: Fix ChatProvider.tsx to use correct CustomApiConfig - resolves "Invalid input → at api" error
+
+**⚠️ CRITICAL FIX**: This phase addresses the root cause of ChatKit integration failure
+
+### Environment Variable Setup
+
+- [X] T050 Add NEXT_PUBLIC_OPENAI_DOMAIN_KEY='localhost-dev' to frontend/.env.local (not just .example)
+- [X] T051 Verify NEXT_PUBLIC_OPENAI_DOMAIN_KEY is accessible in frontend/src/lib/config.ts
+
+### ChatProvider.tsx Configuration Fix
+
+- [X] T052 Fix ChatProvider.tsx lines 77-94 to use CustomApiConfig instead of mixed configuration
+- [X] T053 Remove getClientSecret from useChatKit api configuration (incompatible with CustomApiConfig)
+- [X] T054 Add domainKey: process.env.NEXT_PUBLIC_OPENAI_DOMAIN_KEY || 'localhost-dev' to api configuration
+- [X] T055 Add url: `${CONFIG.API_BASE_URL}/${userId}/chat` to api configuration
+- [X] T056 Implement custom fetch function in api configuration that injects JWT Authorization header
+- [X] T057 Ensure custom fetch function uses tokenRef.current (not token state) to avoid closure issues
+- [X] T058 Verify custom fetch function returns fetch() with merged headers including Authorization: Bearer ${token}
+
+### Validation
+
+- [X] T059 Test ChatProvider initialization - verify no "Invalid input → at api" error in browser console
+- [X] T060 Open chat sidebar - verify ChatKit UI renders without configuration errors
+- [X] T061 Send test message "Hello" - verify it appears in chat and backend receives request
+- [X] T062 Check Network tab - verify POST to /api/{user_id}/chat includes Authorization header with JWT
+
+### Critical Fixes from PHR-0052 Root Cause Analysis
+
+**Purpose**: Implement FR-017 (threads.list routing) and FR-018 (message metadata) to resolve UI blank issue
+
+**Change 1: ChatProvider.tsx - Handle threads.list request type**
+
+- [X] T063 Implement threads.list request interception in frontend/src/components/ChatProvider.tsx custom fetch function (FR-017)
+- [X] T064 Add request type checking: parse body, if type === 'threads.list', return mock Response with {data: [], has_more: false}
+- [X] T065 Test threads.list interception: verify console shows mock response, no backend request sent
+
+**Change 2: Backend chat.py - Add metadata to thread.message.created**
+
+- [X] T066 Add message metadata to backend/src/api/chat.py thread.message.created event (FR-018)
+- [X] T067 Include "status": "completed" and "created_at": int(time.time()) in message object
+- [X] T068 Test message persistence: send message, verify it remains visible after response.done
+
+**Checkpoint**: ChatKit SDK initializes successfully, threads.list intercepted, messages persist after streaming
 
 ---
 

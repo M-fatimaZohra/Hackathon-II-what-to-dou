@@ -1,15 +1,20 @@
 import os
 import json
+import time
+import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
-from openai import OpenAI
 from openai.types.responses import ResponseTextDeltaEvent
 from dotenv import load_dotenv
+from sqlmodel import Session
+
+# Import proper types from OpenAI Agents SDK for type-safe event handling
+from agents import RawResponsesStreamEvent, RunItemStreamEvent, AgentUpdatedStreamEvent
 
 from src.database.db import get_session
 from src.services.chat_service import get_chat_response, run_agent_workflow_streamed
-from src.middleware.auth_handler import get_verified_user
+from src.services.conversation_service import ConversationService
+from src.middleware.auth_handler import get_verified_user, get_current_user
 from src.schema.chat_models import ChatRequest, ChatResponse
 
 # Load environment variables
@@ -17,78 +22,23 @@ load_dotenv(override=True)
 
 router = APIRouter()
 
-# Initialize OpenAI client for ChatKit
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-
-class SessionResponse(BaseModel):
-    """Response model for session endpoint"""
-    client_secret: str
-
-
-@router.post("/{user_id}/chat/session", response_model=SessionResponse)
-async def create_chat_session(
-    user_id: str,
-    current_user_id: str = Depends(get_verified_user)
-):
-    """
-    Session exchange endpoint for ChatKit Advanced Integration.
-
-    Creates a ChatKit session using OpenAI's ChatKit API and returns a client_secret
-    for the frontend to use with the ChatKit SDK.
-
-    Args:
-        user_id: The ID of the authenticated user (from path)
-        current_user_id: The ID of the authenticated user (from JWT, verified against path)
-
-    Returns:
-        SessionResponse: Contains client_secret for ChatKit SDK
-    """
-    # Verify that the user_id in the path matches the current user from JWT
-    if current_user_id != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: User ID mismatch"
-        )
-
-    # Get CHATKIT_WORKFLOW_ID from environment
-    workflow_id = os.getenv("CHATKIT_WORKFLOW_ID")
-    if not workflow_id:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="CHATKIT_WORKFLOW_ID not configured"
-        )
-
-    # Verify OpenAI API key is configured
-    if not os.getenv("OPENAI_API_KEY"):
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="OPENAI_API_KEY not configured"
-        )
-
-    try:
-        # Create ChatKit session using OpenAI SDK with correct parameters
-        session = client.beta.chatkit.sessions.create(
-            user=user_id,
-            workflow={'id': workflow_id}
-        )
-
-        # Return client_secret as expected by frontend
-        return SessionResponse(client_secret=session.client_secret)
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create ChatKit session: {str(e)}"
-        )
-
 
 async def stream_chat_response(user_id: str, conversation_id: int, message: str):
     """
     Generator function that streams chat responses as SSE events.
 
-    Yields raw OpenAI Responses API events for ChatKit SDK compatibility.
-    The frontend useChatKit hook expects standard OpenAI event structures.
+    Yields OpenAI Responses API events using Atomic Response Initialization:
+    1. thread.created - Thread anchor for conversation
+    2. conversation.item.created - User's message (content type: "text")
+    3. response.created - Atomic init with assistant output item pre-populated
+    4. response.output_text.delta - Stream text chunks in real-time (repeated)
+    5. response.output_text.done - Finalize streamed text
+    6. response.output_item.done - Finalize message item
+    7. response.done - Commit to history
+
+    Uses Atomic Response Initialization: response.created includes the assistant
+    output item upfront, eliminating separate output_item.added and content_part
+    events. This matches ChatKit v1.5.0 expectations.
 
     Args:
         user_id: The ID of the authenticated user
@@ -96,50 +46,170 @@ async def stream_chat_response(user_id: str, conversation_id: int, message: str)
         message: The user's input message
 
     Yields:
-        SSE formatted events with raw OpenAI Responses API data
+        SSE formatted events compatible with OpenAI Responses API / ChatKit SDK
     """
+
+    # Event ID counter for unique SSE event IDs
+    event_counter = 0
+    def next_event_id():
+        nonlocal event_counter
+        event_counter += 1
+        return f"evt_{event_counter}"
+
     try:
-        # Use the streaming function that yields raw event.data
+        thread_id = str(conversation_id)
+        response_id = f"resp_{int(time.time())}_{uuid.uuid4().hex[:8]}"
+        output_item_id = f"item_{int(time.time())}_{uuid.uuid4().hex[:8]}"
+
+        # 1. Thread Anchor - Establishes conversation context
+        thread_event = {
+            "id": next_event_id(),
+            "type": "thread.created",
+            "thread": {
+                "id": thread_id
+            }
+        }
+        yield f"data: {json.dumps(thread_event)}\n\n"
+
+        # 2. User Message - conversation.item.created
+        # Content type MUST be "text" (not "input_text") for ChatKit to render it
+        user_item_event = {
+            "id": next_event_id(),
+            "type": "conversation.item.created",
+            "item": {
+                "id": f"msg-user-{conversation_id}",
+                "type": "message",
+                "role": "user",
+                "content": [{"type": "text", "text": message}],
+                "status": "completed"
+            }
+        }
+        yield f"data: {json.dumps(user_item_event)}\n\n"
+
+        # 3. Atomic Response Created - response.created
+        # CRITICAL: Pre-populate output array with the assistant item immediately
+        # This tells ChatKit the message container exists from the start
+        response_created_event = {
+            "id": next_event_id(),
+            "type": "response.created",
+            "response": {
+                "id": response_id,
+                "object": "realtime.response",
+                "status": "in_progress",
+                "output": [{
+                    "id": output_item_id,
+                    "type": "message",
+                    "role": "assistant",
+                    "content": [{"type": "text", "text": ""}]
+                }]
+            }
+        }
+        yield f"data: {json.dumps(response_created_event)}\n\n"
+
+        # 4. Stream Text Deltas - response.output_text.delta
+        # Real-time streaming of assistant response
+        assistant_response_text = ""
+
         async for event_data in run_agent_workflow_streamed(user_id, message, conversation_id):
-            # Serialize the raw event data to JSON for SSE
-            # ChatKit SDK expects standard OpenAI Responses API format
-            if isinstance(event_data, ResponseTextDeltaEvent):
-                # Serialize ResponseTextDeltaEvent to dict
-                event_dict = {
-                    "type": "response.output_text.delta",
-                    "delta": event_data.delta
-                }
-                yield f"data: {json.dumps(event_dict)}\n\n"
 
-            elif hasattr(event_data, 'type'):
-                # Handle other event types (tool_start, tool_end, error)
-                if event_data.type == "tool_start":
-                    event_dict = {
-                        "type": "tool_start",
-                        "tool_name": event_data.tool.name if hasattr(event_data, 'tool') else "unknown"
-                    }
-                    yield f"data: {json.dumps(event_dict)}\n\n"
+            # Handle RawResponsesStreamEvent (text deltas from OpenAI)
+            if isinstance(event_data, RawResponsesStreamEvent):
+                # Check if the data is ResponseTextDeltaEvent
+                if isinstance(event_data.data, ResponseTextDeltaEvent):
+                    # Accumulate text for final message
+                    assistant_response_text += event_data.data.delta
 
-                elif event_data.type == "tool_end":
-                    event_dict = {
-                        "type": "tool_end",
-                        "tool_name": event_data.tool.name if hasattr(event_data, 'tool') else "unknown",
-                        "output": getattr(event_data, 'output', None)
+                    # Send response.output_text.delta event for real-time streaming display
+                    # CRITICAL: Must link to response_id, output_index, content_index
+                    text_delta_event = {
+                        "id": next_event_id(),
+                        "type": "response.output_text.delta",
+                        "response_id": response_id,
+                        "item_id": output_item_id,
+                        "output_index": 0,
+                        "content_index": 0,
+                        "delta": event_data.data.delta
                     }
-                    yield f"data: {json.dumps(event_dict)}\n\n"
+                    yield f"data: {json.dumps(text_delta_event)}\n\n"
 
-                elif event_data.type == "error":
-                    event_dict = {
-                        "type": "error",
-                        "message": getattr(event_data, 'message', str(event_data))
-                    }
-                    yield f"data: {json.dumps(event_dict)}\n\n"
+            # Handle RunItemStreamEvent (tool calls from Agents SDK)
+            elif isinstance(event_data, RunItemStreamEvent):
+                # Check if this is a tool_call_item
+                if hasattr(event_data, 'item') and hasattr(event_data.item, 'type'):
+                    if event_data.item.type == "tool_call_item":
+                        tool_name = getattr(event_data.item, 'name', 'unknown')
+                        # Optional: Send tool execution event if needed
+                        pass
+
+            # Handle AgentUpdatedStreamEvent (agent state changes)
+            elif isinstance(event_data, AgentUpdatedStreamEvent):
+                # Optional: Log or handle agent updates if needed
+                pass
+
+        # 5. Output Text Done - response.output_text.done
+        # Finalizes the streamed text output
+        output_text_done_event = {
+            "id": next_event_id(),
+            "type": "response.output_text.done",
+            "response_id": response_id,
+            "item_id": output_item_id,
+            "output_index": 0,
+            "content_index": 0,
+            "text": assistant_response_text
+        }
+        yield f"data: {json.dumps(output_text_done_event)}\n\n"
+
+        # 6. Output Item Done - response.output_item.done
+        # Finalizes the message item with complete content
+        output_item_done_event = {
+            "id": next_event_id(),
+            "type": "response.output_item.done",
+            "response_id": response_id,
+            "output_index": 0,
+            "item": {
+                "id": output_item_id,
+                "type": "message",
+                "role": "assistant",
+                "status": "completed",
+                "content": [{
+                    "type": "text",
+                    "text": assistant_response_text
+                }]
+            }
+        }
+        yield f"data: {json.dumps(output_item_done_event)}\n\n"
+
+        # 7. Response Done - response.done
+        # Commits the complete response to history
+        response_done_event = {
+            "id": next_event_id(),
+            "type": "response.done",
+            "response": {
+                "id": response_id,
+                "object": "realtime.response",
+                "status": "completed",
+                "output": [{
+                    "id": output_item_id,
+                    "type": "message",
+                    "role": "assistant",
+                    "status": "completed",
+                    "content": [{
+                        "type": "text",
+                        "text": assistant_response_text
+                    }]
+                }]
+            }
+        }
+        yield f"data: {json.dumps(response_done_event)}\n\n"
 
     except Exception as e:
         # Send error event
         error_data = {
+            "id": next_event_id(),
             "type": "error",
-            "message": str(e)
+            "error": {
+                "message": str(e)
+            }
         }
         yield f"data: {json.dumps(error_data)}\n\n"
 
@@ -148,7 +218,8 @@ async def stream_chat_response(user_id: str, conversation_id: int, message: str)
 async def chat_endpoint_streaming(
     user_id: str,
     request: ChatRequest,
-    current_user_id: str = Depends(get_verified_user)
+    current_user_id: str = Depends(get_current_user),
+    session: Session = Depends(get_session)
 ):
     """
     Streaming chat endpoint that processes natural language input for task management.
@@ -158,7 +229,8 @@ async def chat_endpoint_streaming(
     Args:
         user_id: The ID of the authenticated user (from path)
         request: The chat request containing message and conversation_id
-        current_user_id: The ID of the authenticated user (from JWT, verified against path)
+        current_user_id: The ID of the authenticated user (from JWT)
+        session: Database session for conversation management
 
     Returns:
         StreamingResponse: SSE stream with chat responses and tool calls
@@ -170,8 +242,21 @@ async def chat_endpoint_streaming(
             detail="Access denied: User ID mismatch"
         )
 
-    # Determine conversation ID - use provided one from request or default to 1 if None
-    conversation_id = request.conversation_id if request.conversation_id is not None else 1
+    # Handle conversation_id: create new conversation if None, or verify existing one
+    if request.conversation_id is None:
+        # Create a new conversation for this user
+        conversation = ConversationService.create_conversation(session, user_id)
+        conversation_id = conversation.id
+    else:
+        # Verify that the provided conversation belongs to the user
+        try:
+            ConversationService.get_history(session, request.conversation_id, user_id)
+            conversation_id = request.conversation_id
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Conversation not found or does not belong to the user"
+            )
 
     # Return streaming response with SSE
     return StreamingResponse(

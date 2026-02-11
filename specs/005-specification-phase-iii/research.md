@@ -32,20 +32,49 @@
 
 **Integration Pattern**:
 ```typescript
-// Hook-based pattern with ChatKit SDK
+// Hook-based pattern with ChatKit SDK using CustomApiConfig
 import { ChatKit, useChatKit } from '@openai/chatkit-react';
 
 function ChatProvider({ children }) {
   const { control } = useChatKit({
     api: {
+      // CustomApiConfig for self-hosted backend
+      domainKey: process.env.NEXT_PUBLIC_OPENAI_DOMAIN_KEY || 'localhost-dev',
       url: `${CONFIG.API_BASE_URL}/api/${userId}/chat`,
-      domainKey: process.env.NEXT_PUBLIC_OPENAI_DOMAIN_KEY,
-      fetch: (url, options) => {
+
+      // Custom fetch with request type routing and JWT injection
+      fetch: async (url, options) => {
+        const originalBody = JSON.parse(options.body as string);
+
+        // CRITICAL: Intercept threads.list requests (FR-017)
+        // Backend doesn't implement thread listing endpoint
+        if (originalBody.type === 'threads.list') {
+          return new Response(JSON.stringify({
+            data: [],
+            has_more: false
+          }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
+        // Handle threads.create and threads.runs.create
+        // Transform to backend format
+        const transformedBody = {
+          message: originalBody.params?.input?.content || '',
+          conversation_id: originalBody.params?.thread_id
+            ? parseInt(originalBody.params.thread_id, 10)
+            : undefined
+        };
+
+        // Inject JWT Authorization header
         return fetch(url, {
           ...options,
+          body: JSON.stringify(transformedBody),
           headers: {
             ...options.headers,
             'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
           },
         });
       },
@@ -55,6 +84,68 @@ function ChatProvider({ children }) {
   return <ChatKit control={control} className="h-full w-full" />;
 }
 ```
+
+**ChatKit SDK Configuration Types**:
+
+The @openai/chatkit-react SDK supports two mutually exclusive configuration types:
+
+1. **HostedApiConfig** (OpenAI-hosted backend):
+```typescript
+{
+  getClientSecret: () => Promise<string>
+}
+```
+
+2. **CustomApiConfig** (Self-hosted backend) - **USED IN THIS PROJECT**:
+```typescript
+{
+  domainKey: string,      // Required for domain verification
+  url: string,            // Backend endpoint URL
+  fetch?: typeof fetch    // Optional custom fetch for auth injection
+}
+```
+
+**CRITICAL**: You CANNOT mix properties from both types. Using `url` (CustomApiConfig) with `getClientSecret` (HostedApiConfig) causes SDK validation error: "Invalid input → at api"
+
+**Why CustomApiConfig**:
+- Allows self-hosted backend with custom SSE format
+- Acts as pass-through - doesn't enforce ChatKit protocol
+- Custom fetch function enables JWT injection
+- Backend can use any response format for MCP tool flexibility
+
+**Backend Response Format**:
+Backend uses custom SSE format (not ChatKit protocol):
+```json
+{
+  "type": "response.output_text.delta",
+  "delta": "Hello, "
+}
+```
+
+ChatKit SDK with CustomApiConfig accepts this format directly - no translation needed.
+
+**ChatKit Multi-Request Architecture** (Discovered during implementation - PHR-0052):
+
+ChatKit SDK sends multiple request types during operation:
+- **threads.list**: Sent on mount to load conversation history
+- **threads.create**: Sent when user creates new conversation
+- **threads.runs.create**: Sent for messages in existing conversations
+
+**Critical Finding**: Backend only implements a single `/api/{user_id}/chat` endpoint, not separate endpoints for each request type. The custom fetch function MUST intercept `threads.list` requests and return mock responses, otherwise:
+1. `threads.list` gets transformed to `{message: ''}`
+2. Backend returns error or invalid response
+3. ChatKit stores broken response internally
+4. When streaming completes, ChatKit reconciles state and clears UI (blank screen)
+
+**Solution**: Request type routing in custom fetch function (see updated integration pattern below).
+
+**Message Persistence Requirements** (Discovered during implementation - PHR-0052):
+
+ChatKit SDK requires specific metadata fields in SSE events to persist messages after streaming:
+- `status: "completed"` - Indicates message is fully processed
+- `created_at: timestamp` - Unix timestamp for message ordering
+
+Without these fields, ChatKit discards messages when `response.done` event is received, causing messages to disappear from UI after streaming completes.
 
 ### 2. Next.js 16 App Router Architecture
 

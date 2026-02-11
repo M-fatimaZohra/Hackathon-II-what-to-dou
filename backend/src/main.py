@@ -38,7 +38,7 @@ app.add_middleware(
     allow_origins=origins,  # Allow multiple frontend URLs in development
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["Authorization", "Content-Type"],  # Only allow necessary headers
+    allow_headers=["*"],  # Allow all headers for ChatKit SDK compatibility
 )
 
 # Include API routes

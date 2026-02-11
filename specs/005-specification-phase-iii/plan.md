@@ -64,6 +64,8 @@ export const CONFIG = {
 
 **Streaming Protocol**: Server-Sent Events (SSE) for real-time message streaming (FR-015)
 
+**ChatKit SDK Integration**: Frontend uses CustomApiConfig which acts as pass-through for backend responses - no protocol translation needed
+
 **Backend Architecture**:
 ```python
 # backend/src/services/chat_service.py
@@ -123,8 +125,25 @@ async def chat_endpoint_streaming(user_id: str, request: ChatRequest):
 - **Model**: OpenAI gpt-4o (can be configured via environment or Agent constructor)
 - **Streaming Method**: `Runner.run_streamed()` from OpenAI Agents SDK v0.7.0
 - **Event Filtering**: Filter `ResponseTextDeltaEvent` for text chunks, `tool_end` for tool calls
-- **SSE Format**: `data: {"type": "chunk", "content": "..."}\n\n`
+- **SSE Format**: Custom format with required metadata fields:
+  ```json
+  // Text delta events
+  {"type": "response.text.delta", "delta": {"text": "..."}}
+
+  // Message created events (MUST include metadata for ChatKit persistence)
+  {
+    "type": "thread.message.created",
+    "message": {
+      "id": "msg-user-123",
+      "role": "user",
+      "content": [{"type": "text", "text": "..."}],
+      "status": "completed",        // REQUIRED for ChatKit SDK
+      "created_at": 1707580800      // REQUIRED for ChatKit SDK
+    }
+  }
+  ```
 - **Integration**: MCP tools for task CRUD operations via `mcp_servers` parameter
+- **Frontend Integration**: ChatKit SDK's CustomApiConfig accepts custom SSE format directly (no translation layer)
 
 **Key Responsibilities**:
 - Handle SSE streaming protocol via `Runner.run_streamed()`
@@ -132,27 +151,30 @@ async def chat_endpoint_streaming(user_id: str, request: ChatRequest):
 - Route requests to MCP tools
 - Fetch conversation history from Neon DB
 - Enforce JWT verification via `auth_handler`
+- Return custom SSE format (ChatKit SDK accepts via CustomApiConfig pass-through)
 
 ## Authentication Flow
 
 **Complete Request Flow**:
 ```
 1. ChatKit UI (Frontend)
-   ↓ [User sends message with JWT token]
-2. FastAPI Endpoint (/api/{user_id}/chat)
+   ↓ [User sends message]
+2. ChatProvider (useChatKit with CustomApiConfig)
+   ↓ [Custom fetch injects JWT Authorization header]
+3. FastAPI Endpoint (/api/{user_id}/chat)
    ↓ [JWT verified by auth_handler middleware]
-3. ChatKitServer
-   ↓ [Initializes session, fetches thread history from Neon DB]
-4. OpenAI Agents SDK
+4. Conversation Service
+   ↓ [Fetches conversation history from Neon DB]
+5. OpenAI Agents SDK (Runner.run_streamed)
    ↓ [Processes message, determines tool calls]
-5. MCP Tool (Task CRUD operations)
+6. MCP Tool (Task CRUD operations)
    ↓ [Executes database operations]
-6. Neon PostgreSQL Database
+7. Neon PostgreSQL Database
    ↓ [Returns results]
-7. SSE Stream Response
-   ↓ [Streams back to frontend via ChatKitServer]
-8. ChatKit UI (Frontend)
-   [Displays streamed response in real-time]
+8. SSE Stream Response (Custom Format)
+   ↓ [Streams back: {"type": "response.output_text.delta", "delta": "..."}]
+9. ChatKit UI (Frontend)
+   [Displays streamed response in real-time via CustomApiConfig pass-through]
 ```
 
 **JWT Verification Points**:
@@ -160,6 +182,102 @@ async def chat_endpoint_streaming(user_id: str, request: ChatRequest):
 - **User Isolation**: Extracts `user_id` from JWT and verifies it matches path parameter
 - **Scope Enforcement**: All requests scoped to `/api/{user_id}/` endpoints
 - **Token Source**: `authClient.getSession().accessToken` from Better Auth 1.4.10
+
+## ChatKit SDK Multi-Request Architecture
+
+**Critical Integration Detail**: ChatKit SDK sends multiple request types during operation, and the custom fetch function must route them appropriately to prevent state corruption.
+
+### Request Types
+
+ChatKit SDK sends three distinct request types:
+
+1. **threads.list** - Sent on component mount to load conversation history
+   - Purpose: Fetch list of existing conversation threads
+   - Backend Implementation: NOT IMPLEMENTED (backend only has single chat endpoint)
+   - Frontend Handling: MUST be intercepted and mocked (FR-017)
+
+2. **threads.create** - Sent when user sends first message in new conversation
+   - Purpose: Create new conversation thread
+   - Backend Implementation: Handled by `/api/{user_id}/chat` endpoint
+   - Frontend Handling: Pass through to backend with JWT
+
+3. **threads.runs.create** - Sent for subsequent messages in existing conversation
+   - Purpose: Add message to existing conversation
+   - Backend Implementation: Handled by `/api/{user_id}/chat` endpoint
+   - Frontend Handling: Pass through to backend with JWT
+
+### Request Routing Strategy
+
+**Problem**: If `threads.list` requests reach the backend chat endpoint, they are transformed to `{message: ''}` which causes:
+- Backend returns error or invalid response
+- ChatKit SDK stores broken response internally
+- When streaming completes with `response.done`, ChatKit reconciles state
+- State inconsistency causes ChatKit to CLEAR entire thread view (UI goes blank)
+
+**Solution**: Custom fetch function must check request type and route accordingly:
+
+```typescript
+// frontend/src/components/ChatProvider.tsx
+fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+  const originalBody = JSON.parse(init.body as string);
+
+  // CRITICAL: Intercept threads.list requests (FR-017)
+  if (originalBody.type === 'threads.list') {
+    // Return mock empty response - backend doesn't implement thread listing
+    return new Response(JSON.stringify({
+      data: [],
+      has_more: false
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  // Handle threads.create and threads.runs.create
+  // Transform to backend format and inject JWT
+  const transformedBody = {
+    message: originalBody.params?.input?.content || '',
+    conversation_id: originalBody.params?.thread_id
+      ? parseInt(originalBody.params.thread_id, 10)
+      : undefined
+  };
+
+  return fetch(url, {
+    ...init,
+    body: JSON.stringify(transformedBody),
+    headers: {
+      ...init.headers,
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+}
+```
+
+### Message Persistence Requirements
+
+**Problem**: ChatKit SDK requires specific metadata fields in SSE events to persist messages after streaming completes. Without these fields, messages are discarded when `response.done` is received.
+
+**Required Fields** (FR-018):
+- `status: "completed"` - Indicates message is fully processed
+- `created_at: timestamp` - Unix timestamp for message ordering
+
+**Backend Implementation**:
+```python
+# backend/src/api/chat.py
+user_message_event = {
+    "type": "thread.message.created",
+    "message": {
+        "id": f"msg-user-{conversation_id}",
+        "role": "user",
+        "content": [{"type": "text", "text": message}],
+        "status": "completed",           # REQUIRED
+        "created_at": int(time.time())   # REQUIRED
+    }
+}
+```
+
+**Why This Matters**: These implementation details were discovered through debugging (PHR-0044 through PHR-0052) and are critical for ChatKit integration to work correctly. They are not obvious from high-level requirements but are essential for production deployment.
 
 ## Statelessness Architecture
 
@@ -271,7 +389,7 @@ frontend/
 │   │   └── TaskForm.tsx
 │   ├── lib/
 │   │   ├── config.ts                # Environment configuration with NEXT_PUBLIC_MOD toggle
-│   │   ├── chatkit-client.ts        # ChatKit SDK configuration (FR-003)
+│   │   ├── jwt-utils.ts             # JWT token extraction utilities from cookies
 │   │   ├── api.ts                   # API client (existing, extended)
 │   │   ├── auth-client.ts           # Better Auth integration (existing)
 │   │   └── auth.ts                  # Auth configuration (existing)
@@ -301,7 +419,7 @@ backend/
 └── tests/
 ```
 
-**Structure Decision**: Simplified architecture using ChatKit SDK's built-in components. Frontend uses a single `<ChatAssistant />` wrapper around `@openai/chatkit-react`'s `<ChatKit />` component (receiving control object from useChatKit hook), eliminating the need for manual ChatWindow, ChatInput, and ChatMessage components. Backend implements `ChatKitServer` class from `openai-chatkit` Python SDK to handle SSE streaming protocol. Environment configuration centralized in `config.ts` using `NEXT_PUBLIC_MOD` toggle.
+**Structure Decision**: Simplified architecture using ChatKit SDK's built-in components with CustomApiConfig. Frontend uses a single `<ChatAssistant />` wrapper around `@openai/chatkit-react`'s `<ChatKit />` component (receiving control object from useChatKit hook with CustomApiConfig), eliminating the need for manual ChatWindow, ChatInput, and ChatMessage components. Backend uses custom SSE streaming format (not ChatKitServer) which ChatKit SDK accepts via CustomApiConfig pass-through. Environment configuration centralized in `config.ts` using `NEXT_PUBLIC_MOD` toggle.
 
 ## Complexity Tracking
 

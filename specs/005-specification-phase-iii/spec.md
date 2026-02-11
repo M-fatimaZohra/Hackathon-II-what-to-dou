@@ -69,6 +69,9 @@ As an authenticated user, I want the chat interface to support multi-turn conver
 - What happens when a user sends ambiguous or unclear natural language commands?
 - What is the expected behavior if auth_user_id is missing in MCP tool calls?
 - How should the frontend handle background jobs or system calls that don't involve user authentication?
+- What happens if `threads.list` requests are not intercepted and reach the backend chat endpoint?
+- How does the frontend handle ChatKit SDK state corruption if invalid responses are received for `threads.list` requests?
+- What happens if backend omits required message metadata (`status`, `created_at`) from SSE events?
 
 ## Requirements *(mandatory)*
 
@@ -76,9 +79,9 @@ As an authenticated user, I want the chat interface to support multi-turn conver
 
 - **FR-001**: Frontend MUST provide a persistent sidebar overlay chat interface on the `/tasks` page using ChatKit SDK
 - **FR-002**: Frontend MUST implement a single `<ChatAssistant />` wrapper component that uses `@openai/chatkit-react` SDK's `<ChatKit />` component with control object from useChatKit hook
-- **FR-003**: Frontend MUST configure ChatKit client in `/lib/chatkit-client.ts` with JWT token provider using `authClient.getSession()` and baseUrl scoped to `/api/{user_id}/chat`
+- **FR-003**: Frontend MUST configure ChatKit SDK using CustomApiConfig in ChatProvider component with useChatKit hook, providing domainKey, url (scoped to `/api/{user_id}/chat`), and custom fetch function that injects JWT Authorization header from Better Auth session
 - **FR-004**: Frontend MUST connect to backend `/api/{user_id}/chat` endpoint for message processing with JWT verification
-- **FR-005**: Frontend MUST handle string-based MCP tool responses for task CRUD operations and display them appropriately
+- **FR-005**: Frontend MUST handle backend's custom SSE format responses (including MCP tool responses) and display them appropriately through ChatKit SDK
 - **FR-006**: Frontend MUST enforce stateless operation: each request includes JWT + userId, frontend does not persist conversation state
 - **FR-007**: Frontend MUST enforce user isolation: all requests scoped to `/api/{user_id}/` endpoints and verified via JWT
 - **FR-008**: Frontend MUST support dev and production environments with different logging, test/mock data, and security configurations
@@ -88,15 +91,33 @@ As an authenticated user, I want the chat interface to support multi-turn conver
 - **FR-012**: Frontend MUST implement advanced error handling with exponential backoff and retry logic
 - **FR-013**: Frontend MUST implement lazy loading and code splitting for performance optimization
 - **FR-014**: Frontend MUST provide loading states and error feedback to users
-- **FR-015**: Frontend MUST support real-time message streaming via Server-Sent Events (SSE) from the FastAPI backend
+- **FR-015**: Frontend MUST support real-time message streaming via Server-Sent Events (SSE) from the FastAPI backend using ChatKit SDK's CustomApiConfig pass-through capability
 - **FR-016**: Frontend MUST implement connection pooling and intelligent reconnection logic for SSE connections
+- **FR-017**: Frontend MUST intercept ChatKit SDK's `threads.list` requests in custom fetch function and return mock empty response `{data: [], has_more: false}` to prevent state corruption, as backend does not implement thread listing endpoint
+- **FR-018**: Frontend MUST expect backend to include message metadata (`status: "completed"`, `created_at: timestamp`) in `thread.message.created` SSE events to ensure ChatKit SDK persists messages after streaming completes
 
 ### Key Entities *(include if feature involves data)*
 
 - **ChatAssistant**: Frontend wrapper component that integrates `@openai/chatkit-react` SDK's `<ChatKit />` component for the sidebar overlay, receiving control object from useChatKit hook
-- **ChatProvider**: Frontend component that uses useChatKit hook to configure ChatKit client with custom fetch function for JWT authentication and baseUrl scoped to `/api/{user_id}/chat`
+- **ChatProvider**: Frontend component that uses useChatKit hook with CustomApiConfig (domainKey, url, custom fetch) to configure ChatKit SDK for self-hosted backend integration with JWT authentication
 - **Message**: Frontend representation of individual chat messages with content, role, and metadata
 - **Conversation**: Frontend representation of chat session with messages and context
+
+### Technical Notes
+
+- **ChatKit SDK Configuration**: Uses CustomApiConfig (not HostedApiConfig) for self-hosted backend integration
+- **Authentication Flow**: Custom fetch function in CustomApiConfig injects JWT Authorization header from Better Auth session
+- **Backend Format**: Backend uses custom SSE format for flexibility with MCP tools; ChatKit SDK accepts this via CustomApiConfig pass-through
+- **No Protocol Bridge**: ChatKit SDK's CustomApiConfig allows backend to use custom response format without translation layer
+- **ChatKit Multi-Request Architecture**: ChatKit SDK sends multiple request types during operation:
+  - `threads.list`: Sent on mount to load conversation history (must be intercepted and mocked)
+  - `threads.create`: Sent when user sends first message in new conversation
+  - `threads.runs.create`: Sent for subsequent messages in existing conversation
+  - Custom fetch function must route these request types appropriately to prevent state corruption
+- **Message Persistence Requirements**: ChatKit SDK requires specific metadata fields in SSE events:
+  - `thread.message.created` events must include `status: "completed"` and `created_at: timestamp`
+  - Without these fields, ChatKit discards messages after streaming completes
+  - Backend must provide these fields in custom SSE format
 
 ## Success Criteria *(mandatory)*
 
@@ -117,3 +138,5 @@ As an authenticated user, I want the chat interface to support multi-turn conver
 - **SC-013**: Frontend implements connection pooling with 90% connection success rate for SSE
 - **SC-014**: Error messages are displayed within 1 second of error occurrence for 95% of errors
 - **SC-015**: Frontend correctly parses and displays 100% of string-based MCP tool responses
+- **SC-016**: Frontend successfully intercepts and mocks 100% of `threads.list` requests without backend errors
+- **SC-017**: Messages persist in chat UI after streaming completes for 100% of conversations

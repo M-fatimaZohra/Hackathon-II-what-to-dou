@@ -90,6 +90,15 @@ Follow this order to implement the ChatKit integration:
    - Configure custom fetch function for JWT authentication
    - Implement error handling
 
+4.5. **Implement Request Type Routing (Critical - FR-017)**
+   - File: `frontend/src/components/ChatProvider.tsx`
+   - Add request type checking in custom fetch function
+   - Intercept `threads.list` requests and return mock response `{data: [], has_more: false}`
+   - Prevent state corruption by not sending threads.list to backend
+   - Test: Verify browser console shows mock response for threads.list
+   - Test: Verify no backend request is sent for threads.list
+   - **Why Critical**: Without this, ChatKit state corrupts and UI goes blank after streaming
+
 ### Phase 2: UI Components (Day 3-4)
 
 5. **Create ChatAssistant Component**
@@ -105,13 +114,31 @@ Follow this order to implement the ChatKit integration:
    - Add toggle button for chat sidebar
    - Integrate ChatAssistant component
 
+### Phase 2.5: Backend Message Metadata (Day 4)
+
+**Purpose**: Add required metadata fields to SSE events for ChatKit message persistence
+
+7. **Add Message Metadata to Backend (Critical - FR-018)**
+   - File: `backend/src/api/chat.py`
+   - Locate the `thread.message.created` event in `stream_chat_response()` function
+   - Add `"status": "completed"` to the message object
+   - Add `"created_at": int(time.time())` to the message object
+   - Import `time` module at top of file if not already imported
+   - Test: Send message, verify it persists in UI after streaming completes
+   - Test: Check browser console for `thread.message.created` event with metadata
+   - **Why Critical**: Without these fields, ChatKit discards messages after streaming
+
 ### Phase 3: Integration & Testing (Day 5)
 
-7. **Test Chat Integration**
+8. **Test Chat Integration**
    - Verify sidebar opens/closes correctly
    - Test JWT authentication flow
    - Verify message sending and receiving
    - Test error handling scenarios
+   - **Critical Tests**:
+     - Verify threads.list is intercepted (check console logs)
+     - Verify messages persist after streaming completes
+     - Send multiple messages and confirm all remain visible
 
 ### Phase 4: Backend Integration (Day 6-7)
 

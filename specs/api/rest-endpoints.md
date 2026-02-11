@@ -387,37 +387,40 @@ Content-Type: text/event-stream
 Cache-Control: no-cache
 Connection: keep-alive
 
-event: message
-data: {"type": "token", "content": "I've", "timestamp": "2026-02-08T10:30:00.100Z"}
+data: {"type": "response.output_text.delta", "delta": "I've"}
 
-event: message
-data: {"type": "token", "content": " created", "timestamp": "2026-02-08T10:30:00.200Z"}
+data: {"type": "response.output_text.delta", "delta": " created"}
 
-event: message
-data: {"type": "token", "content": " a", "timestamp": "2026-02-08T10:30:00.300Z"}
+data: {"type": "response.output_text.delta", "delta": " a"}
 
-event: message
-data: {"type": "token", "content": " task", "timestamp": "2026-02-08T10:30:00.400Z"}
+data: {"type": "response.output_text.delta", "delta": " task"}
 
-event: mcp_tool
-data: {"toolName": "create_task", "response": "Task created successfully: Buy groceries", "timestamp": "2026-02-08T10:30:01.000Z"}
+data: {"type": "tool_start", "tool_name": "create_task"}
 
-event: complete
-data: {"messageId": "msg_123456", "status": "success", "timestamp": "2026-02-08T10:30:01.100Z"}
+data: {"type": "tool_end", "tool_name": "create_task", "output": "Task created successfully"}
+
+data: {"type": "complete"}
 ```
 
-**SSE Event Types**:
-- `message`: Streamed text tokens from AI assistant (TTFT < 500ms target)
-- `mcp_tool`: MCP tool execution results
-- `complete`: Final message completion with metadata
+**SSE Event Format**:
+Backend uses custom SSE format (not ChatKit protocol):
+- `response.output_text.delta`: Token-by-token text streaming
+- `tool_start`: MCP tool execution started
+- `tool_end`: MCP tool execution completed with output
+- `complete`: Message streaming finished
 - `error`: Error occurred during processing
 
+**Frontend Integration**:
+- ChatKit SDK uses CustomApiConfig which acts as pass-through
+- Frontend receives custom SSE format directly
+- No protocol translation needed
+
 **Backend Implementation**:
-- Uses `ChatKitServer` class from `openai-chatkit` Python SDK
-- Handles SSE streaming protocol automatically
+- Uses `Runner.run_streamed()` from OpenAI Agents SDK
+- Streams via FastAPI's `StreamingResponse` with custom format
 - Integrates with OpenAI Agents SDK for AI processing
 - Routes to MCP tools for task operations
-- Fetches conversation history from Neon DB on session init
+- Fetches conversation history from Neon DB before processing
 
 **Validation**:
 - `message`: Required, 1-10,000 characters
